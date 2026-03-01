@@ -1,0 +1,148 @@
+:root {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  overflow-x: hidden;
+}
+
+#app {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Dark theme overrides for naive-ui */
+.n-card {
+  --n-color: #1a1a1a !important;
+  --n-border-color: #333 !important;
+  --n-text-color: #fff !important;
+  --n-title-text-color: #fff !important;
+}
+
+.n-card__content {
+  background: #1a1a1a !important;
+  color: #fff !important;
+}
+
+.n-button {
+  --n-color: #333 !important;
+  --n-color-hover: #444 !important;
+  --n-color-pressed: #222 !important;
+  --n-text-color: #fff !important;
+}
+
+.n-button--primary-type {
+  --n-color: #667eea !important;
+  --n-color-hover: #7a8ff5 !important;
+  --n-color-pressed: #5a6fd4 !important;
+}
+
+.n-button--error-type {
+  --n-color: #e74c3c !important;
+  --n-color-hover: #f05a4a !important;
+  --n-color-pressed: #c93d2d !important;
+}
+
+.n-button--info-type {
+  --n-color: #3498db !important;
+  --n-color-hover: #4aa3e5 !important;
+}
+
+.n-data-table {
+  --n-th-text-color: #999 !important;
+  --n-td-text-color: #fff !important;
+  --n-th-color: #1a1a1a !important;
+  --n-td-color: #1a1a1a !important;
+  --n-border-color: #333 !important;
+}
+
+.n-input {
+  --n-color: #1a1a1a !important;
+  --n-color-focus: #222 !important;
+  --n-border: 1px solid #333 !important;
+  --n-text-color: #fff !important;
+}
+
+.n-input-number {
+  --n-color: #1a1a1a !important;
+  --n-color-focus: #222 !important;
+  --n-border: 1px solid #333 !important;
+  --n-text-color: #fff !important;
+}
+
+.n-form-item .n-form-item-label {
+  --n-text-color: #999 !important;
+}
+
+.n-modal {
+  --n-color: #1a1a1a !important;
+}
+
+.n-dialog {
+  --n-color: #1a1a1a !important;
+}
+
+.n-modal-card {
+  background: #1a1a1a !important;
+}
+
+.n-modal-card__content {
+  background: #1a1a1a !important;
+  color: #fff !important;
+}
+
+.n-descriptions-table {
+  background: transparent !important;
+}
+
+.n-descriptions-table-row {
+  background: transparent !important;
+}
+
+.n-descriptions-label, .n-descriptions-item {
+  color: #999 !important;
+}
+
+.n-descriptions-item__text {
+  color: #fff !important;
+}
+
+.n-tabs .n-tabs-tab {
+  color: #999 !important;
+}
+
+.n-tabs .n-tabs-tab--active {
+  color: #667eea !important;
+}
+
+.n-tabs .n-tabs-bar {
+  background: #667eea !important;
+}
+
+.n-spin-container {
+  background: transparent !important;
+}
+
+.n-empty .n-empty-description {
+  color: #666 !important;
+}
+
+.n-divider {
+  border-color: #333 !important;
+}
