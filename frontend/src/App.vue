@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NLayout, NLayoutHeader, NLayoutContent, NMenu, NAvatar, NDropdown, NMessageProvider } from 'naive-ui'
+import { NLayout, NLayoutHeader, NLayoutContent, NMenu, NAvatar, NDropdown, NMessageProvider, NConfigProvider, darkTheme } from 'naive-ui'
 import { useRouter, useRoute } from 'vue-router'
 
 const router = useRouter()
@@ -9,6 +9,10 @@ const menuOptions = [
   {
     label: 'Home',
     key: '/'
+  },
+  {
+    label: 'Watchlist',
+    key: '/watchlist'
   }
 ]
 
@@ -16,14 +20,15 @@ const handleMenuUpdate = (key: string) => {
   router.push(key)
 }
 
+const handleUserAction = (key: string) => {
+  if (key === 'logout') {
+    localStorage.removeItem('token')
+    localStorage.removeItem('tokenExpiry')
+    router.push('/login')
+  }
+}
+
 const userOptions = [
-  {
-    label: 'Profile',
-    key: 'profile'
-  },
-  {
-    type: 'divider'
-  },
   {
     label: 'Logout',
     key: 'logout'
@@ -32,8 +37,9 @@ const userOptions = [
 </script>
 
 <template>
-  <n-message-provider>
-    <n-layout style="min-height: 100vh" class="dark-layout">
+  <n-config-provider :theme="darkTheme">
+    <n-message-provider>
+      <n-layout style="min-height: 100vh" class="dark-layout">
       <n-layout-header bordered class="dark-header">
         <div class="header-content">
           <div style="display: flex; align-items: center; gap: 20px">
@@ -45,7 +51,7 @@ const userOptions = [
               @update:value="handleMenuUpdate"
             />
           </div>
-          <n-dropdown :options="userOptions" trigger="click">
+          <n-dropdown :options="userOptions" trigger="click" @select="handleUserAction">
             <n-avatar round style="cursor: pointer; background: #333">User</n-avatar>
           </n-dropdown>
         </div>
@@ -55,6 +61,7 @@ const userOptions = [
       </n-layout-content>
     </n-layout>
   </n-message-provider>
+  </n-config-provider>
 </template>
 
 <style scoped>

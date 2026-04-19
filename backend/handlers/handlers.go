@@ -1,14 +1,12 @@
 package handlers
 
 import (
-	"context"
 	"net/http"
 	"time"
 
 	"backend/config"
 	"backend/models"
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 func HealthCheck(c *gin.Context) {
@@ -17,6 +15,14 @@ func HealthCheck(c *gin.Context) {
 		Timestamp: time.Now(),
 		Service:   "stock-api",
 	}
+
+	dbStatus := "connected"
+	if err := config.PingPostgres(); err != nil {
+		dbStatus = "disconnected"
+		response.Status = "degraded"
+	}
+
+	response.Database = dbStatus
 	c.JSON(http.StatusOK, response)
 }
 
@@ -27,19 +33,8 @@ func NotFound(c *gin.Context) {
 }
 
 func GetStocks(c *gin.Context) {
-	collection := config.GetCollection("stocks")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	cursor, err := collection.Find(ctx, bson.M{})
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	defer cursor.Close(ctx)
-
 	var stocks []models.Stock
-	if err := cursor.All(ctx, &stocks); err != nil {
+	if err := config.DB.Find(&stocks).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -58,14 +53,8 @@ func CreateStock(c *gin.Context) {
 		return
 	}
 
-	collection := config.GetCollection("stocks")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	// Check if stock already exists
 	var existing models.Stock
-	err := collection.FindOne(ctx, bson.M{"code": req.Code}).Decode(&existing)
-	if err == nil {
+	if err := config.DB.Where("code = ?", req.Code).First(&existing).Error; err == nil {
 		c.JSON(http.StatusConflict, gin.H{"error": "Stock with this code already exists"})
 		return
 	}
@@ -80,8 +69,7 @@ func CreateStock(c *gin.Context) {
 		UpdatedAt:    time.Now(),
 	}
 
-	_, err = collection.InsertOne(ctx, stock)
-	if err != nil {
+	if err := config.DB.Create(&stock).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -96,17 +84,13 @@ func DeleteStock(c *gin.Context) {
 		return
 	}
 
-	collection := config.GetCollection("stocks")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	result, err := collection.DeleteOne(ctx, bson.M{"code": code})
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	result := config.DB.Where("code = ?", code).Delete(&models.Stock{})
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
 		return
 	}
 
-	if result.DeletedCount == 0 {
+	if result.RowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Stock not found"})
 		return
 	}

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"net/http"
 	"time"
 
@@ -9,7 +8,6 @@ import (
 	"backend/models"
 	"backend/services"
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 type TechnicalAnalysis = services.TechnicalAnalysis
@@ -39,22 +37,14 @@ func GetStockAnalysis(c *gin.Context) {
 		return
 	}
 
-	// Fetch stock from database
-	collection := config.GetCollection("stocks")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
 	var stock models.Stock
-	err := collection.FindOne(ctx, bson.M{"code": code}).Decode(&stock)
-	if err != nil {
+	if err := config.DB.Where("code = ?", code).First(&stock).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Stock not found in portfolio"})
 		return
 	}
 
-	// Fetch real-time quote from external API
 	quote, err := services.SinaFinanceAPI(code)
 	if err != nil {
-		// If external API fails, use stored price
 		quote = &models.StockQuote{
 			Code:       stock.Code,
 			Name:       stock.Name,
@@ -63,7 +53,6 @@ func GetStockAnalysis(c *gin.Context) {
 		}
 	}
 
-	// Calculate analysis
 	currentPrice := quote.Current
 	quantity := stock.Quantity
 	buyPrice := stock.BuyPrice
@@ -77,7 +66,6 @@ func GetStockAnalysis(c *gin.Context) {
 		profitRate = (profitLoss / cost) * 100
 	}
 
-	// Calculate change from previous close (using stored price as previous close)
 	change := 0.0
 	changeAmount := 0.0
 	if stock.CurrentPrice > 0 {

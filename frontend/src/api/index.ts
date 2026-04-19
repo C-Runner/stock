@@ -6,6 +6,27 @@ export interface HealthResponse {
   service: string
 }
 
+// Watchlist types
+export interface WatchlistItem {
+  code: string
+  name: string
+  addedAt: string
+}
+
+export interface WatchlistQuote {
+  code: string
+  name: string
+  addedAt: string
+  current: number
+  open: number
+  high: number
+  low: number
+  change: number
+  changeRate: number
+  volume: number
+  updateTime: string
+}
+
 export interface Stock {
   code: string
   name: string
@@ -99,14 +120,27 @@ export interface TechnicalAnalysis {
   recentPrices: PricePoint[]
 }
 
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token')
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+  return headers
+}
+
 export const api = {
   async get<T>(path: string): Promise<T> {
     const response = await fetch(`${API_BASE_URL}${path}`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      headers: getAuthHeaders()
     })
+    if (response.status === 401) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('tokenExpiry')
+      window.location.href = '/login'
+      throw new Error('Unauthorized')
+    }
     if (!response.ok) {
       throw new Error(`API Error: ${response.status}`)
     }
@@ -116,11 +150,15 @@ export const api = {
   async post<T>(path: string, data: unknown): Promise<T> {
     const response = await fetch(`${API_BASE_URL}${path}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(data)
     })
+    if (response.status === 401) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('tokenExpiry')
+      window.location.href = '/login'
+      throw new Error('Unauthorized')
+    }
     if (!response.ok) {
       throw new Error(`API Error: ${response.status}`)
     }
@@ -130,10 +168,14 @@ export const api = {
   async delete<T>(path: string): Promise<T> {
     const response = await fetch(`${API_BASE_URL}${path}`, {
       method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      headers: getAuthHeaders()
     })
+    if (response.status === 401) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('tokenExpiry')
+      window.location.href = '/login'
+      throw new Error('Unauthorized')
+    }
     if (!response.ok) {
       throw new Error(`API Error: ${response.status}`)
     }
@@ -151,5 +193,14 @@ export const stockApi = {
   deleteStock: (code: string) => api.delete<{ message: string }>(`/api/stocks/${code}`),
   getQuote: (code: string) => api.get<StockQuote>(`/api/stocks/quote/${code}`),
   getAnalysis: (code: string) => api.get<StockAnalysis>(`/api/stocks/analysis/${code}`),
-  getTechnical: (code: string) => api.get<TechnicalAnalysis>(`/api/stocks/technical/${code}`)
+  getTechnical: (code: string) => api.get<TechnicalAnalysis>(`/api/stocks/technical/${code}`),
+  searchStocks: (q: string) => api.get<Stock[]>(`/api/stocks/search?q=${encodeURIComponent(q)}`)
+}
+
+export const watchlistApi = {
+  getWatchlist: () => api.get<WatchlistItem[]>('/api/watchlist'),
+  addToWatchlist: (code: string, name: string) =>
+    api.post<WatchlistItem>('/api/watchlist', { code, name }),
+  removeFromWatchlist: (code: string) =>
+    api.delete<{ message: string }>(`/api/watchlist/${code}`)
 }

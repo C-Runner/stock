@@ -282,8 +282,6 @@ const fetchStocks = async () => {
   } finally {
     loading.value = false
   }
-  {
-    loading.value }
 }
 
 const handleAddStock = async () => {

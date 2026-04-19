@@ -119,9 +119,9 @@ func parseSinaResponse(body string, code string) (*models.StockQuote, error) {
 	quote.Name = gbkToUtf8(fields[0])
 
 	quote.Open = parseFloat(fields[1])
-	quote.Current = parseFloat(fields[2])
-	quote.High = parseFloat(fields[3])
-	quote.Low = parseFloat(fields[4])
+	quote.Current = parseFloat(fields[3]) // fields[2] is yesterday close, fields[3] is current price
+	quote.High = parseFloat(fields[4])
+	quote.Low = parseFloat(fields[5])
 
 	// Volume (shares)
 	quote.Volume = parseInt64(fields[8])

@@ -72,11 +72,18 @@ html, body {
   --n-border-color: #333 !important;
 }
 
-.n-input {
-  --n-color: #1a1a1a !important;
-  --n-color-focus: #222 !important;
-  --n-border: 1px solid #333 !important;
-  --n-text-color: #fff !important;
+.n-input .n-input__input-el,
+.n-input input,
+.n-input__input-el,
+.n-input__textarea-el {
+  background-color: #1a1a1a !important;
+  background: #1a1a1a !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+}
+
+.n-input-wrapper {
+  background: #1a1a1a !important;
 }
 
 .n-input-number {

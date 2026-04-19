@@ -6,16 +6,21 @@ type HealthResponse struct {
 	Status    string    `json:"status"`
 	Timestamp time.Time `json:"timestamp"`
 	Service   string    `json:"service"`
+	Database  string    `json:"database"`
 }
 
 type Stock struct {
-	Code         string    `json:"code" bson:"code"`
-	Name         string    `json:"name" bson:"name"`
-	CurrentPrice float64   `json:"currentPrice" bson:"currentPrice"`
-	Quantity     int       `json:"quantity" bson:"quantity"`
-	BuyPrice     float64   `json:"buyPrice" bson:"buyPrice"`
-	CreatedAt    time.Time `json:"createdAt" bson:"createdAt"`
-	UpdatedAt    time.Time `json:"updatedAt" bson:"updatedAt"`
+	Code         string    `json:"code" gorm:"primaryKey;column:code"`
+	Name         string    `json:"name" gorm:"column:name"`
+	CurrentPrice float64   `json:"currentPrice" gorm:"column:current_price"`
+	Quantity     int       `json:"quantity" gorm:"column:quantity"`
+	BuyPrice     float64   `json:"buyPrice" gorm:"column:buy_price"`
+	CreatedAt    time.Time `json:"createdAt" gorm:"column:created_at"`
+	UpdatedAt    time.Time `json:"updatedAt" gorm:"column:updated_at"`
+}
+
+func (Stock) TableName() string {
+	return "stocks"
 }
 
 type StockRequest struct {
@@ -52,4 +57,30 @@ type StockAnalysis struct {
 	ProfitRate   float64 `json:"profitRate"`
 	Change       float64 `json:"change"`
 	ChangeAmount float64 `json:"changeAmount"`
+}
+
+// WatchlistItem represents a stock in user's watchlist
+type WatchlistItem struct {
+	Code    string    `json:"code" gorm:"primaryKey;column:code"`
+	Name    string    `json:"name" gorm:"column:name"`
+	AddedAt time.Time `json:"addedAt" gorm:"column:added_at"`
+}
+
+func (WatchlistItem) TableName() string {
+	return "watchlist"
+}
+
+// WatchlistQuote combines watchlist item with real-time quote
+type WatchlistQuote struct {
+	Code       string  `json:"code"`
+	Name       string  `json:"name"`
+	AddedAt    string  `json:"addedAt"`
+	Current    float64 `json:"current"`
+	Open       float64 `json:"open"`
+	High       float64 `json:"high"`
+	Low        float64 `json:"low"`
+	Change     float64 `json:"change"`
+	ChangeRate float64 `json:"changeRate"`
+	Volume     int64   `json:"volume"`
+	UpdateTime string  `json:"updateTime"`
 }
