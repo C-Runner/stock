@@ -38,7 +38,7 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, _from, next) => {
+router.beforeEach((to) => {
   const token = localStorage.getItem('token')
   const expiresAt = localStorage.getItem('tokenExpiry')
 
@@ -46,17 +46,13 @@ router.beforeEach((to, _from, next) => {
     if (!token || !expiresAt || Date.now() > Number(expiresAt) * 1000) {
       localStorage.removeItem('token')
       localStorage.removeItem('tokenExpiry')
-      next('/login')
-      return
+      return '/login'
     }
   }
 
   if (to.path === '/login' && token && expiresAt && Date.now() <= Number(expiresAt) * 1000) {
-    next('/')
-    return
+    return '/'
   }
-
-  next()
 })
 
 export default router

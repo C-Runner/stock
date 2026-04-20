@@ -7,34 +7,24 @@ import {
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { watchlistApi, stockApi, type WatchlistItem, type StockQuote } from '../api'
+import { IconSearch, IconRefresh } from '../components/icons'
+import { formatVolume } from '../utils/format'
 import StockSearch from '../components/StockSearch.vue'
 
 const router = useRouter()
 
-// Icons
-const SearchIcon = () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', fill: 'currentColor' }, [
-  h('path', { d: 'M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z' })
-])
-const RefreshIcon = () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', fill: 'currentColor' }, [
-  h('path', { d: 'M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z' })
-])
-
-// Watchlist state
 const watchlist = ref<WatchlistItem[]>([])
 const quotes = ref<Map<string, StockQuote>>(new Map())
 const loading = ref(false)
 const refreshing = ref(false)
 
-// Auto-refresh state
 const autoRefresh = ref(true)
 const refreshInterval = ref(30)
 const lastRefresh = ref<Date | null>(null)
 const refreshTimer = ref<ReturnType<typeof setInterval> | null>(null)
 
-// Search modal
 const showSearch = ref(false)
 
-// Table columns
 interface WatchlistRow {
   code: string
   name: string
@@ -90,19 +80,12 @@ const columns: DataTableColumns<WatchlistRow> = [
   }
 ]
 
-// Table data with quotes
 const tableData = computed<WatchlistRow[]>(() =>
   watchlist.value.map(item => ({
     ...item,
     quote: quotes.value.get(item.code) || null
   }))
 )
-
-const formatVolume = (vol: number): string => {
-  if (vol >= 100000000) return (vol / 100000000).toFixed(2) + ' 亿'
-  if (vol >= 10000) return (vol / 10000).toFixed(2) + ' 万'
-  return vol.toLocaleString()
-}
 
 const fetchWatchlist = async () => {
   loading.value = true
@@ -173,35 +156,25 @@ const stopAutoRefresh = () => {
 }
 
 watch(autoRefresh, (enabled) => {
-  if (enabled) {
-    startAutoRefresh()
-  } else {
-    stopAutoRefresh()
-  }
+  if (enabled) startAutoRefresh()
+  else stopAutoRefresh()
 })
 
 watch(refreshInterval, () => {
-  if (autoRefresh.value) {
-    startAutoRefresh()
-  }
+  if (autoRefresh.value) startAutoRefresh()
 })
 
 onMounted(async () => {
   await fetchWatchlist()
   await fetchQuotes()
-  if (autoRefresh.value) {
-    startAutoRefresh()
-  }
+  if (autoRefresh.value) startAutoRefresh()
 })
 
-onUnmounted(() => {
-  stopAutoRefresh()
-})
+onUnmounted(() => stopAutoRefresh())
 </script>
 
 <template>
   <div class="watchlist">
-    <!-- Header -->
     <div class="watchlist-header">
       <div class="header-left">
         <h1>Watchlist</h1>
@@ -210,19 +183,18 @@ onUnmounted(() => {
       <n-space>
         <n-button type="primary" @click="showSearch = true">
           <template #icon>
-            <n-icon><SearchIcon /></n-icon>
+            <n-icon><IconSearch /></n-icon>
           </template>
           Add Stock
         </n-button>
         <n-button @click="fetchQuotes" :loading="refreshing">
           <template #icon>
-            <n-icon><RefreshIcon /></n-icon>
+            <n-icon><IconRefresh /></n-icon>
           </template>
         </n-button>
       </n-space>
     </div>
 
-    <!-- Refresh Controls -->
     <n-card class="refresh-card" :bordered="false">
       <div class="refresh-controls">
         <div class="refresh-toggle">
@@ -258,7 +230,6 @@ onUnmounted(() => {
       </div>
     </n-card>
 
-    <!-- Watchlist Table -->
     <n-card class="table-card" :bordered="false">
       <n-spin :show="loading">
         <n-empty v-if="!loading && tableData.length === 0" description="No stocks in watchlist" />
@@ -273,7 +244,6 @@ onUnmounted(() => {
       </n-spin>
     </n-card>
 
-    <!-- Search Modal -->
     <StockSearch
       v-model:show="showSearch"
       @select="handleAddToWatchlist"

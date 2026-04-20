@@ -1,6 +1,5 @@
 <template>
   <div class="home">
-    <!-- Header -->
     <div class="home-header">
       <div class="header-left">
         <h1>Stock Portfolio</h1>
@@ -8,18 +7,17 @@
       </div>
       <n-button type="primary" size="large" @click="showAddModal = true">
         <template #icon>
-          <n-icon><Plus /></n-icon>
+          <n-icon><IconPlus /></n-icon>
         </template>
         Add Stock
       </n-button>
     </div>
 
-    <!-- Stats Cards -->
     <div class="stats-row">
       <n-card class="stat-card" :bordered="false">
         <div class="stat-content">
           <div class="stat-icon blue">
-            <n-icon size="24"><Wallet /></n-icon>
+            <n-icon size="24"><IconWallet /></n-icon>
           </div>
           <div class="stat-info">
             <span class="stat-label">Total Stocks</span>
@@ -31,7 +29,7 @@
       <n-card class="stat-card" :bordered="false">
         <div class="stat-content">
           <div class="stat-icon green">
-            <n-icon size="24"><Coin /></n-icon>
+            <n-icon size="24"><IconCoin /></n-icon>
           </div>
           <div class="stat-info">
             <span class="stat-label">Total Market Value</span>
@@ -43,7 +41,7 @@
       <n-card class="stat-card" :bordered="false">
         <div class="stat-content">
           <div class="stat-icon orange">
-            <n-icon size="24"><TrendCharts /></n-icon>
+            <n-icon size="24"><IconTrend /></n-icon>
           </div>
           <div class="stat-info">
             <span class="stat-label">Total Cost</span>
@@ -54,8 +52,8 @@
 
       <n-card class="stat-card" :bordered="false">
         <div class="stat-content">
-          <div class="stat-icon" :class="totalProfit >= 0 ? 'red' : 'green'">
-            <n-icon size="24"><DataLine /></n-icon>
+          <div class="stat-icon" :class="totalProfit >= 0 ? 'red' : 'teal'">
+            <n-icon size="24"><IconDataLine /></n-icon>
           </div>
           <div class="stat-info">
             <span class="stat-label">Total P/L</span>
@@ -67,14 +65,13 @@
       </n-card>
     </div>
 
-    <!-- Stock Table -->
     <n-card class="table-card" :bordered="false">
       <template #header>
         <div class="table-header">
           <span>Holdings</span>
           <n-button text @click="fetchStocks" :loading="loading">
             <template #icon>
-              <n-icon><Refresh /></n-icon>
+              <n-icon><IconRefresh /></n-icon>
             </template>
           </n-button>
         </div>
@@ -92,7 +89,6 @@
       />
     </n-card>
 
-    <!-- Add Stock Modal -->
     <n-modal v-model:show="showAddModal" preset="card" title="Add New Stock" style="width: 500px;">
       <n-form :model="stockForm">
         <n-form-item label="Stock Code" path="code">
@@ -151,26 +147,7 @@ import {
   NInput, NInputNumber, NEmpty, NSpace, NIcon
 } from 'naive-ui'
 import { stockApi, type Stock, type StockRequest } from '../api'
-
-// Icons
-const Plus = () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', fill: 'currentColor' }, [
-  h('path', { d: 'M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z' })
-])
-const Wallet = () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', fill: 'currentColor' }, [
-  h('path', { d: 'M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z' })
-])
-const Coin = () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', fill: 'currentColor' }, [
-  h('path', { d: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.76c1.86-.29 2.81-1.4 2.81-2.82 0-2.39-1.79-2.96-3.66-3.42z' })
-])
-const TrendCharts = () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', fill: 'currentColor' }, [
-  h('path', { d: 'M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z' })
-])
-const DataLine = () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', fill: 'currentColor' }, [
-  h('path', { d: 'M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z' })
-])
-const Refresh = () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', fill: 'currentColor' }, [
-  h('path', { d: 'M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z' })
-])
+import { IconPlus, IconWallet, IconCoin, IconTrend, IconDataLine, IconRefresh } from '../components/icons'
 
 const router = useRouter()
 
@@ -188,7 +165,6 @@ const stockForm = ref<StockRequest>({
   buyPrice: 0
 })
 
-// Computed stats
 const totalMarketValue = computed(() =>
   stocks.value.reduce((sum, s) => sum + s.currentPrice * s.quantity, 0)
 )
@@ -324,7 +300,6 @@ onMounted(() => fetchStocks())
   box-sizing: border-box;
 }
 
-/* Header */
 .home-header {
   display: flex;
   justify-content: space-between;
@@ -345,7 +320,6 @@ onMounted(() => fetchStocks())
   font-size: 14px;
 }
 
-/* Stats Row */
 .stats-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -397,8 +371,7 @@ onMounted(() => fetchStocks())
 .stat-icon.green { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
 .stat-icon.orange { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
 .stat-icon.red { background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); }
-.stat-icon.red.up { background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); }
-.stat-icon.green.down { background: linear-gradient(135deg, #38ef7d 0%, #11998e 100%); }
+.stat-icon.teal { background: linear-gradient(135deg, #38ef7d 0%, #11998e 100%); }
 
 .stat-info {
   display: flex;
@@ -419,7 +392,6 @@ onMounted(() => fetchStocks())
 .stat-value.up { color: #ff6b6b; }
 .stat-value.down { color: #38ef7d; }
 
-/* Table Card */
 .table-header {
   display: flex;
   justify-content: space-between;
@@ -516,7 +488,6 @@ onMounted(() => fetchStocks())
     font-size: 10px;
   }
 
-  /* Table optimizations */
   .table-card :deep(.n-data-table) {
     font-size: 11px;
   }

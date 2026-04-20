@@ -1,11 +1,10 @@
 <template>
   <div class="analysis">
     <n-space vertical :size="20">
-      <!-- Header -->
       <div class="stock-header">
         <n-button @click="goBack" quaternary>
           <template #icon>
-            <n-icon><ArrowBack /></n-icon>
+            <n-icon><IconArrowBack /></n-icon>
           </template>
         </n-button>
         <div class="stock-info" v-if="quote">
@@ -20,11 +19,10 @@
         </div>
       </div>
 
-      <!-- Position Analysis -->
       <n-card class="analysis-card" :bordered="false" shadow>
         <template #header>
           <div class="card-header">
-            <n-icon size="20"><Wallet /></n-icon>
+            <n-icon size="20"><IconWallet /></n-icon>
             <span>Position Analysis</span>
           </div>
         </template>
@@ -68,18 +66,16 @@
         </n-spin>
       </n-card>
 
-      <!-- Technical Analysis -->
       <n-card class="analysis-card" :bordered="false" shadow>
         <template #header>
           <div class="card-header">
-            <n-icon size="20"><TrendCharts /></n-icon>
+            <n-icon size="20"><IconTrend /></n-icon>
             <span>Technical Analysis</span>
           </div>
         </template>
         <n-spin :show="techLoading">
           <n-alert v-if="techError" type="warning">{{ techError }}</n-alert>
           <template v-if="technical">
-            <!-- MA/EMA Section -->
             <div class="tech-section">
               <h4 class="tech-title">Moving Averages</h4>
               <div class="tech-grid">
@@ -92,7 +88,6 @@
 
             <n-divider />
 
-            <!-- RSI Section -->
             <div class="tech-section">
               <h4 class="tech-title">RSI</h4>
               <div class="tech-grid">
@@ -105,7 +100,6 @@
 
             <n-divider />
 
-            <!-- MACD Section -->
             <div class="tech-section">
               <h4 class="tech-title">MACD</h4>
               <div class="tech-grid three-col">
@@ -128,7 +122,6 @@
 
             <n-divider />
 
-            <!-- KDJ Section -->
             <div class="tech-section">
               <h4 class="tech-title">KDJ</h4>
               <div class="tech-grid three-col">
@@ -149,7 +142,6 @@
 
             <n-divider />
 
-            <!-- BOLL Section -->
             <div class="tech-section">
               <h4 class="tech-title">Bollinger Bands</h4>
               <div class="tech-grid three-col">
@@ -171,11 +163,10 @@
         </n-spin>
       </n-card>
 
-      <!-- Real-time Quote -->
       <n-card class="analysis-card" :bordered="false" shadow>
         <template #header>
           <div class="card-header">
-            <n-icon size="20"><Clock /></n-icon>
+            <n-icon size="20"><IconClock /></n-icon>
             <span>Real-time Quote</span>
           </div>
         </template>
@@ -209,11 +200,10 @@
         </template>
       </n-card>
 
-      <!-- K-Line Chart -->
       <n-card class="analysis-card" :bordered="false" shadow>
         <template #header>
           <div class="card-header">
-            <n-icon size="20"><ChartIcon /></n-icon>
+            <n-icon size="20"><IconChart /></n-icon>
             <span>K-Line Chart</span>
           </div>
         </template>
@@ -232,31 +222,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, h } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   NButton, NCard, NSpace, NSpin, NAlert,
   NDivider, NIcon
 } from 'naive-ui'
 import { stockApi, type StockAnalysis, type StockQuote, type TechnicalAnalysis } from '../api'
+import { IconArrowBack, IconWallet, IconTrend, IconClock, IconChart } from '../components/icons'
+import { formatVolume, formatAmount } from '../utils/format'
 import KLineChart from '../components/KLineChart.vue'
-
-// Icons as functional components
-const ArrowBack = () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', fill: 'currentColor' }, [
-  h('path', { d: 'M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z' })
-])
-const Wallet = () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', fill: 'currentColor' }, [
-  h('path', { d: 'M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z' })
-])
-const TrendCharts = () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', fill: 'currentColor' }, [
-  h('path', { d: 'M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z' })
-])
-const Clock = () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', fill: 'currentColor' }, [
-  h('path', { d: 'M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z' })
-])
-const ChartIcon = () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', fill: 'currentColor' }, [
-  h('path', { d: 'M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z' })
-])
 
 const route = useRoute()
 const router = useRouter()
@@ -271,18 +246,6 @@ const techLoading = ref(false)
 const techError = ref('')
 
 const goBack = () => router.push('/')
-
-const formatVolume = (vol: number): string => {
-  if (vol >= 100000000) return (vol / 100000000).toFixed(2) + ' 亿'
-  if (vol >= 10000) return (vol / 10000).toFixed(2) + ' 万'
-  return vol.toString()
-}
-
-const formatAmount = (amt: number): string => {
-  if (amt >= 100000000) return (amt / 100000000).toFixed(2) + ' 亿'
-  if (amt >= 10000) return (amt / 10000).toFixed(2) + ' 万'
-  return amt.toFixed(2)
-}
 
 const getRSIClass = (rsi: number): string => {
   if (rsi > 70) return 'overbought'
@@ -345,7 +308,6 @@ onMounted(() => {
   box-sizing: border-box;
 }
 
-/* Header */
 .stock-header {
   display: flex;
   align-items: center;
@@ -389,7 +351,6 @@ onMounted(() => {
   background: rgba(255,255,255,0.2);
 }
 
-/* Cards */
 .analysis-card {
   border-radius: 12px;
   background: #1a1a1a !important;
@@ -409,7 +370,6 @@ onMounted(() => {
   color: #fff;
 }
 
-/* Stats Grid */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -438,7 +398,6 @@ onMounted(() => {
   font-weight: 600;
 }
 
-/* Profit Section */
 .profit-section {
   display: flex;
   justify-content: space-around;
@@ -461,7 +420,6 @@ onMounted(() => {
   font-weight: bold;
 }
 
-/* Tech Section */
 .tech-section {
   margin-bottom: 8px;
 }
@@ -504,7 +462,6 @@ onMounted(() => {
   color: #fff;
 }
 
-/* Quote Grid */
 .quote-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -535,7 +492,6 @@ onMounted(() => {
   font-size: 12px;
 }
 
-/* Color Classes */
 .up {
   color: #e74c3c;
 }

@@ -76,3 +76,6 @@ K-line data fetched from Sina Finance API, then calculated client-side:
 - `/analysis/:code` - Stock analysis with K-line chart (protected)
 
 Router guard validates JWT token and expiry from localStorage before allowing access to protected routes.
+
+## 国际化与语言规则
+本项目要求所有面向用户的界面元素必须使用**英文**。
