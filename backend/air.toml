@@ -1,0 +1,46 @@
+# Air TOML Configuration
+# Cross-platform hot reload for Go
+
+# Build binary name with OS-specific extension
+[build]
+  bin_name = "main{{if eq .Os \"windows\"}}.exe{{end}}"
+  cmd = "go build -o ./tmp/{{.BinName}} ."
+  log = "build-errors.log"
+  send_interrupt = false
+  delay = 1000
+  kill_timeout = 5000
+  poll = false
+  poll_interval = 0
+
+  # Watch these extensions
+  include_ext = ["go", "mod", "toml"]
+
+  # Exclude these directories
+  exclude_dir = ["tmp", "logs", ".git", "vendor"]
+
+  # Include specific paths (for nested apps)
+  include_dir = []
+
+  # Exclude specific files
+  exclude_file = []
+  exclude_regex = ["_test.go"]
+  exclude_unchanged = false
+
+# Run binary
+[run]
+  args = []
+  env = {}
+  fork = false
+  kill_delay = "0s"
+  notify_msg = ""
+
+# Log
+[log]
+  time = false
+
+# Color
+[color]
+  build = "yellow"
+  main = "magenta"
+  runner = "green"
+  watcher = "cyan"

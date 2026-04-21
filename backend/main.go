@@ -4,6 +4,7 @@ import (
 	"backend/config"
 	"backend/handlers"
 	"backend/models"
+	"backend/services"
 	"log"
 	"net/http"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/joho/godotenv"
+	"github.com/robfig/cron/v3"
 )
 
 func main() {
@@ -25,7 +27,7 @@ func main() {
 		log.Printf("Warning: Failed to connect to PostgreSQL: %v", err)
 	} else {
 		defer config.DisconnectPostgres()
-		config.DB.AutoMigrate(&models.Stock{}, &models.WatchlistItem{})
+		config.DB.AutoMigrate(&models.Stock{}, &models.WatchlistItem{}, &models.StockDailySnapshot{})
 	}
 
 	r := gin.Default()
@@ -74,6 +76,8 @@ func main() {
 
 	r.GET("/health", handlers.HealthCheck)
 	r.POST("/api/login", handlers.Login)
+	r.POST("/api/stocks/backup", handlers.ManualBackup) // Manual backup trigger
+	r.POST("/api/stocks/backup/:code", handlers.BackupSingleStock) // Backup single stock
 
 	protected := r.Group("/api")
 	protected.Use(authMiddleware)
@@ -86,6 +90,10 @@ func main() {
 		protected.GET("/stocks/analysis/:code", handlers.GetStockAnalysis)
 		protected.GET("/stocks/technical/:code", handlers.GetTechnicalAnalysis)
 
+		protected.GET("/stocks/daily/:code", handlers.GetDailySnapshots)
+		protected.GET("/stocks/daily/:code/:date", handlers.GetDailySnapshot)
+		protected.GET("/stocks/daily/date/:date", handlers.GetAllSnapshotsByDate)
+
 		protected.GET("/watchlist", handlers.GetWatchlist)
 		protected.POST("/watchlist", handlers.AddToWatchlist)
 		protected.DELETE("/watchlist/:code", handlers.RemoveFromWatchlist)
@@ -94,6 +102,18 @@ func main() {
 	}
 
 	r.NoRoute(handlers.NotFound)
+
+	// Start cron scheduler for daily backup at 15:30 China time
+	cronScheduler := cron.New()
+	// Run at 15:30 Beijing time (07:30 UTC) on weekdays (Monday-Friday)
+	cronScheduler.AddFunc("0 7 * * 1-5", func() {
+		log.Println("Starting scheduled daily backup")
+		if err := services.BackupAllWatchlist(); err != nil {
+			log.Printf("Scheduled backup failed: %v", err)
+		}
+	})
+	cronScheduler.Start()
+	defer cronScheduler.Stop()
 
 	log.Printf("Server starting on port %s", cfg.ServerPort)
 	if err := r.Run(":" + cfg.ServerPort); err != nil {

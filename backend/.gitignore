@@ -1,0 +1,13 @@
+# Air build output
+tmp/
+
+# Build errors
+build-errors.log
+
+# Environment
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/

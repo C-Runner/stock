@@ -25,6 +25,12 @@
         </template>
         Add Stock
       </n-button>
+      <n-button size="large" @click="router.push('/watchlist')" class="watchlist-btn">
+        <template #icon>
+          <n-icon><IconSearch /></n-icon>
+        </template>
+        Watchlist
+      </n-button>
     </div>
 
     <div class="stats-row">
@@ -179,7 +185,7 @@ import {
   NInput, NInputNumber, NEmpty, NSpace, NIcon
 } from 'naive-ui'
 import { stockApi, type Stock, type StockRequest } from '../api'
-import { IconPlus, IconWallet, IconCoin, IconTrend, IconDataLine, IconRefresh } from '../components/icons'
+import { IconPlus, IconWallet, IconCoin, IconTrend, IconDataLine, IconRefresh, IconSearch } from '../components/icons'
 
 const router = useRouter()
 
@@ -454,6 +460,17 @@ onMounted(() => fetchStocks())
 .add-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+}
+
+.watchlist-btn {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  font-weight: 600;
+}
+
+.watchlist-btn:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  transform: translateY(-2px);
 }
 
 .stats-row {

@@ -6,8 +6,8 @@ import {
   NSwitch, NSpin, NEmpty, NButtonGroup
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
-import { watchlistApi, stockApi, type WatchlistItem, type StockQuote } from '../api'
-import { IconSearch, IconRefresh } from '../components/icons'
+import { watchlistApi, stockApi, backupApi, type WatchlistItem, type StockQuote } from '../api'
+import { IconSearch, IconRefresh, IconBackup } from '../components/icons'
 import { formatVolume } from '../utils/format'
 import StockSearch from '../components/StockSearch.vue'
 
@@ -17,6 +17,8 @@ const watchlist = ref<WatchlistItem[]>([])
 const quotes = ref<Map<string, StockQuote>>(new Map())
 const loading = ref(false)
 const refreshing = ref(false)
+const backingUp = ref(false)
+const backupStatus = ref<string>('')
 
 const autoRefresh = ref(true)
 const refreshInterval = ref(30)
@@ -47,7 +49,9 @@ const columns: DataTableColumns<WatchlistRow> = [
     width: 100,
     render: (row) => {
       if (!row.quote) return '-'
-      const rate = ((row.quote.current - row.quote.open) / row.quote.open) * 100
+      const rate = row.quote.prevClose > 0
+        ? ((row.quote.current - row.quote.prevClose) / row.quote.prevClose) * 100
+        : 0
       return h('span', { class: rate >= 0 ? 'change-up' : 'change-down' },
         `${rate >= 0 ? '+' : ''}${rate.toFixed(2)}%`
       )
@@ -103,15 +107,18 @@ const fetchQuotes = async () => {
 
   refreshing.value = true
   try {
-    const quotePromises = watchlist.value.map(item =>
-      stockApi.getQuote(item.code).catch(() => null)
+    // Fetch quotes for all watchlist items in parallel
+    const quotesData = await Promise.all(
+      watchlist.value.map(item =>
+        stockApi.getQuote(item.code).then(q => ({ code: item.code, quote: q })).catch(() => null)
+      )
     )
-    const results = await Promise.all(quotePromises)
 
+    // Clear old quotes and set new ones, matching by code to avoid index misalignment
     quotes.value.clear()
-    results.forEach((quote, index) => {
-      if (quote && watchlist.value[index]) {
-        quotes.value.set(watchlist.value[index].code, quote)
+    quotesData.forEach((result) => {
+      if (result && result.quote) {
+        quotes.value.set(result.code, result.quote)
       }
     })
     lastRefresh.value = new Date()
@@ -140,6 +147,24 @@ const handleAddToWatchlist = async (code: string, name: string) => {
     quotes.value.set(code, quote)
   } catch (error) {
     console.error(error)
+  }
+}
+
+const handleBackup = async () => {
+  backingUp.value = true
+  backupStatus.value = 'Starting backup...'
+  try {
+    const result = await backupApi.triggerBackup()
+    backupStatus.value = result.message
+    // Poll for completion or just show started status
+    setTimeout(() => {
+      backupStatus.value = ''
+    }, 3000)
+  } catch (error) {
+    console.error(error)
+    backupStatus.value = 'Backup failed'
+  } finally {
+    backingUp.value = false
   }
 }
 
@@ -194,6 +219,12 @@ onUnmounted(() => stopAutoRefresh())
         </div>
       </div>
       <n-space>
+        <n-button type="primary" @click="handleBackup" :loading="backingUp" class="backup-btn">
+          <template #icon>
+            <n-icon><IconBackup /></n-icon>
+          </template>
+          Backup
+        </n-button>
         <n-button type="primary" @click="showSearch = true" class="add-btn">
           <template #icon>
             <n-icon><IconSearch /></n-icon>
@@ -239,6 +270,9 @@ onUnmounted(() => stopAutoRefresh())
         </div>
         <div class="last-refresh" v-if="lastRefresh">
           Last refresh: {{ lastRefresh.toLocaleTimeString() }}
+        </div>
+        <div class="backup-status" v-if="backupStatus">
+          {{ backupStatus }}
         </div>
       </div>
     </n-card>
@@ -371,6 +405,27 @@ onUnmounted(() => stopAutoRefresh())
   margin: 4px 0 0;
   color: rgba(255, 255, 255, 0.5);
   font-size: 14px;
+}
+
+.backup-btn {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  border: none !important;
+  font-weight: 600;
+}
+
+.backup-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+}
+
+.backup-status {
+  color: #10b981;
+  font-size: 12px;
+  margin-left: 12px;
+  padding: 6px 12px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 8px;
 }
 
 .add-btn {
@@ -527,11 +582,11 @@ onUnmounted(() => stopAutoRefresh())
 }
 
 .change-up {
-  color: #ff6b6b;
+  color: #38ef7d;
 }
 
 .change-down {
-  color: #38ef7d;
+  color: #ff6b6b;
 }
 
 @media (max-width: 768px) {

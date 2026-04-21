@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go env:*)",
+      "Bash(go install:*)",
+      "Bash(go get:*)",
+      "Bash(go build:*)",
+      "Bash(find /e/work/stock/frontend -type f -name *.ts -o -name *.vue -o -name *.js)",
+      "Bash(npm run:*)",
+      "Bash(curl -s \"http://hq.sinajs.cn/list=sh600831\" -H \"Referer: http://finance.sina.com.cn\")"
+    ]
+  }
+}

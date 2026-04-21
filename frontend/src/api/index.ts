@@ -49,6 +49,7 @@ export interface StockQuote {
   code: string
   name: string
   open: number
+  prevClose: number
   high: number
   low: number
   current: number
@@ -118,6 +119,52 @@ export interface TechnicalAnalysis {
   kdj: KDJData
   boll: BOLLData
   recentPrices: PricePoint[]
+}
+
+export interface StockDailySnapshot {
+  code: string
+  date: string
+  name: string
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number
+  amount: number
+  turnoverRate: number
+  ma5: number
+  ma10: number
+  ma20: number
+  ma60: number
+  ema12: number
+  ema26: number
+  rsi6: number
+  rsi12: number
+  rsi24: number
+  dif: number
+  dea: number
+  macd: number
+  kdjk: number
+  kdjd: number
+  kdjj: number
+  bollUpper: number
+  bollMid: number
+  bollLower: number
+  createdAt: string
+}
+
+export interface BackupResponse {
+  message: string
+  status: string
+  started_at?: string
+  code?: string
+  backupDate?: string
+}
+
+export interface DailySnapshotsResponse {
+  code: string
+  count: number
+  snapshots: StockDailySnapshot[]
 }
 
 const getAuthHeaders = () => {
@@ -230,4 +277,18 @@ export const watchlistApi = {
     api.post<WatchlistItem>('/api/watchlist', { code, name }),
   removeFromWatchlist: (code: string) =>
     api.delete<{ message: string }>(`/api/watchlist/${code}`)
+}
+
+export const backupApi = {
+  // Manual backup trigger (async - returns immediately)
+  triggerBackup: () => api.post<BackupResponse>('/api/stocks/backup', {}),
+  // Backup single stock
+  backupStock: (code: string) =>
+    api.post<BackupResponse>(`/api/stocks/backup/${code}`, {}),
+  // Get historical daily snapshots
+  getDailySnapshots: (code: string, limit = 60) =>
+    api.get<DailySnapshotsResponse>(`/api/stocks/daily/${code}?limit=${limit}`),
+  // Get specific date snapshot
+  getDailySnapshot: (code: string, date: string) =>
+    api.get<StockDailySnapshot>(`/api/stocks/daily/${code}/${date}`)
 }

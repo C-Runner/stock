@@ -33,15 +33,16 @@ type StockRequest struct {
 
 // StockQuote represents real-time stock quote from external API
 type StockQuote struct {
-	Code       string  `json:"code"`
-	Name       string  `json:"name"`
-	Open       float64 `json:"open"`
-	High       float64 `json:"high"`
-	Low        float64 `json:"low"`
-	Current    float64 `json:"current"`
-	Volume     int64   `json:"volume"`
-	Amount     float64 `json:"amount"`
-	UpdateTime string  `json:"updateTime"`
+	Code        string  `json:"code"`
+	Name        string  `json:"name"`
+	Open        float64 `json:"open"`
+	PrevClose   float64 `json:"prevClose"`
+	High        float64 `json:"high"`
+	Low         float64 `json:"low"`
+	Current     float64 `json:"current"`
+	Volume      int64   `json:"volume"`
+	Amount      float64 `json:"amount"`
+	UpdateTime  string  `json:"updateTime"`
 }
 
 // StockAnalysis represents stock analysis result with position metrics
@@ -83,4 +84,41 @@ type WatchlistQuote struct {
 	ChangeRate float64 `json:"changeRate"`
 	Volume     int64   `json:"volume"`
 	UpdateTime string  `json:"updateTime"`
+}
+
+// StockDailySnapshot stores daily stock data for historical analysis and backup
+type StockDailySnapshot struct {
+	Code          string    `json:"code" gorm:"primaryKey;column:code"`
+	Date          string    `json:"date" gorm:"primaryKey;column:date"` // Format: 2024-01-01
+	Name          string    `json:"name" gorm:"column:name"`
+	Open          float64   `json:"open" gorm:"column:open"`
+	High          float64   `json:"high" gorm:"column:high"`
+	Low           float64   `json:"low" gorm:"column:low"`
+	Close         float64   `json:"close" gorm:"column:close"`
+	Volume        int64     `json:"volume" gorm:"column:volume"`
+	Amount        float64   `json:"amount" gorm:"column:amount"`
+	TurnoverRate  float64   `json:"turnoverRate" gorm:"column:turnover_rate"` //换手率 %
+	MA5           float64   `json:"ma5" gorm:"column:ma5"`
+	MA10          float64   `json:"ma10" gorm:"column:ma10"`
+	MA20          float64   `json:"ma20" gorm:"column:ma20"`
+	MA60          float64   `json:"ma60" gorm:"column:ma60"`
+	EMA12         float64   `json:"ema12" gorm:"column:ema12"`
+	EMA26         float64   `json:"ema26" gorm:"column:ema26"`
+	RSI6          float64   `json:"rsi6" gorm:"column:rsi6"`
+	RSI12         float64   `json:"rsi12" gorm:"column:rsi12"`
+	RSI24         float64   `json:"rsi24" gorm:"column:rsi24"`
+	DIF           float64   `json:"dif" gorm:"column:dif"`
+	DEA           float64   `json:"dea" gorm:"column:dea"`
+	MACD          float64   `json:"macd" gorm:"column:macd"`
+	KDJK          float64   `json:"kdjk" gorm:"column:kdjk"`
+	KDJD          float64   `json:"kdjd" gorm:"column:kdjd"`
+	KDJJ          float64   `json:"kdjj" gorm:"column:kdjj"`
+	BOLLUpper     float64   `json:"bollUpper" gorm:"column:boll_upper"`
+	BOLLMid       float64   `json:"bollMid" gorm:"column:boll_mid"`
+	BOLLLower     float64   `json:"bollLower" gorm:"column:boll_lower"`
+	CreatedAt     time.Time `json:"createdAt" gorm:"column:created_at"`
+}
+
+func (StockDailySnapshot) TableName() string {
+	return "stock_daily_snapshots"
 }

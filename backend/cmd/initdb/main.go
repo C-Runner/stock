@@ -54,6 +54,40 @@ func main() {
 		`DROP TRIGGER IF EXISTS update_stocks_updated_at ON stocks`,
 		`CREATE TRIGGER update_stocks_updated_at BEFORE UPDATE ON stocks
 		FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()`,
+
+		// stock_daily_snapshots table for backup
+		`CREATE TABLE IF NOT EXISTS stock_daily_snapshots (
+			code VARCHAR(20) NOT NULL,
+			date VARCHAR(20) NOT NULL,
+			name VARCHAR(100),
+			open DECIMAL(15, 2) DEFAULT 0,
+			high DECIMAL(15, 2) DEFAULT 0,
+			low DECIMAL(15, 2) DEFAULT 0,
+			close DECIMAL(15, 2) DEFAULT 0,
+			volume BIGINT DEFAULT 0,
+			amount DECIMAL(20, 2) DEFAULT 0,
+			turnover_rate DECIMAL(10, 4) DEFAULT 0,
+			ma5 DECIMAL(15, 2) DEFAULT 0,
+			ma10 DECIMAL(15, 2) DEFAULT 0,
+			ma20 DECIMAL(15, 2) DEFAULT 0,
+			ma60 DECIMAL(15, 2) DEFAULT 0,
+			ema12 DECIMAL(15, 2) DEFAULT 0,
+			ema26 DECIMAL(15, 2) DEFAULT 0,
+			rsi6 DECIMAL(10, 4) DEFAULT 0,
+			rsi12 DECIMAL(10, 4) DEFAULT 0,
+			rsi24 DECIMAL(10, 4) DEFAULT 0,
+			dif DECIMAL(15, 6) DEFAULT 0,
+			dea DECIMAL(15, 6) DEFAULT 0,
+			macd DECIMAL(15, 6) DEFAULT 0,
+			kdjk DECIMAL(10, 4) DEFAULT 0,
+			kdjd DECIMAL(10, 4) DEFAULT 0,
+			kdjj DECIMAL(10, 4) DEFAULT 0,
+			boll_upper DECIMAL(15, 2) DEFAULT 0,
+			boll_mid DECIMAL(15, 2) DEFAULT 0,
+			boll_lower DECIMAL(15, 2) DEFAULT 0,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (code, date)
+		)`,
 	}
 
 	for _, sql := range sqls {

@@ -126,9 +126,9 @@ watch(searchQuery, (newVal) => {
             </div>
             <div class="stock-price">
               <span class="price">¥{{ selectedQuote.current.toFixed(2) }}</span>
-              <span :class="['change', selectedQuote.current >= selectedQuote.open ? 'up' : 'down']">
-                {{ selectedQuote.current >= selectedQuote.open ? '+' : '' }}
-                {{ (((selectedQuote.current - selectedQuote.open) / selectedQuote.open) * 100).toFixed(2) }}%
+              <span :class="['change', selectedQuote.current >= selectedQuote.prevClose ? 'up' : 'down']">
+                {{ selectedQuote.current >= selectedQuote.prevClose ? '+' : '' }}
+                {{ (((selectedQuote.current - selectedQuote.prevClose) / selectedQuote.prevClose) * 100).toFixed(2) }}%
               </span>
             </div>
             <n-button type="primary" block @click="handleAddToWatchlist">
@@ -144,25 +144,28 @@ watch(searchQuery, (newVal) => {
 <style scoped>
 .modal-header {
   font-weight: 600;
-  font-size: 18px;
+  font-size: 20px;
   color: #fff;
+  letter-spacing: -0.3px;
+  padding: 4px 0;
 }
 
 .modal-body {
-  padding-top: 20px;
+  padding-top: 24px;
 }
 
 .selected-stock {
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(139, 92, 246, 0.05));
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 18px;
+  transition: all 0.25s ease;
 }
 
 .stock-preview {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .stock-header {
@@ -172,32 +175,39 @@ watch(searchQuery, (newVal) => {
 }
 
 .stock-name {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 700;
   color: #fff;
+  letter-spacing: -0.3px;
 }
 
 .stock-code {
   color: rgba(255, 255, 255, 0.5);
-  font-size: 14px;
+  font-size: 13px;
+  font-family: 'JetBrains Mono', monospace;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 10px;
+  border-radius: 6px;
 }
 
 .stock-price {
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  gap: 14px;
 }
 
 .price {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: bold;
   color: #fff;
+  letter-spacing: -0.5px;
 }
 
 .change {
   font-size: 14px;
-  padding: 4px 10px;
-  border-radius: 8px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-weight: 600;
 }
 
 .up {
@@ -221,60 +231,75 @@ watch(searchQuery, (newVal) => {
 .stock-search-modal :deep(.n-base-overlay) {
   background: linear-gradient(
     135deg,
-    rgba(99, 102, 241, 0.15) 0%,
-    rgba(139, 92, 246, 0.1) 50%,
-    rgba(0, 0, 0, 0.5) 100%
+    rgba(99, 102, 241, 0.12) 0%,
+    rgba(139, 92, 246, 0.08) 40%,
+    rgba(6, 182, 212, 0.05) 70%,
+    rgba(0, 0, 0, 0.6) 100%
   ) !important;
-  backdrop-filter: blur(8px) saturate(150%);
+  backdrop-filter: blur(12px) saturate(180%);
 }
 
 .stock-search-modal :deep(.n-dialog__content) {
-  background: rgba(20, 19, 60, 0.95) !important;
+  background: linear-gradient(
+    145deg,
+    rgba(30, 27, 75, 0.95) 0%,
+    rgba(20, 19, 60, 0.98) 100%
+  ) !important;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-bottom: none;
   backdrop-filter: blur(24px);
-  padding: 20px 24px !important;
+  padding: 24px !important;
+  border-radius: 24px 24px 0 0 !important;
 }
 
 .stock-search-modal :deep(.n-dialog__content--last) {
-  background: rgba(20, 19, 60, 0.95) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-top: none;
-  padding: 0 24px 20px !important;
+  background: linear-gradient(
+    145deg,
+    rgba(25, 23, 65, 0.95) 0%,
+    rgba(15, 14, 50, 0.98) 100%
+  ) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(24px);
+  padding: 20px 24px 24px !important;
+  border-radius: 0 0 24px 24px !important;
 }
 
 .stock-search-modal :deep(.n-dialog__close) {
-  top: 16px;
-  right: 16px;
-  width: 32px;
-  height: 32px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  color: rgba(255, 255, 255, 0.6) !important;
-  transition: all 0.2s ease;
+  top: 20px;
+  right: 20px;
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.5) !important;
+  transition: all 0.25s ease;
 }
 
 .stock-search-modal :deep(.n-dialog__close:hover) {
-  background: rgba(255, 107, 107, 0.15);
-  border-color: rgba(255, 107, 107, 0.3);
+  background: rgba(255, 107, 107, 0.15) !important;
+  border-color: rgba(255, 107, 107, 0.3) !important;
   color: #ff6b6b !important;
+  transform: rotate(90deg);
 }
 
 .stock-search-modal :deep(.n-input) {
   background: rgba(255, 255, 255, 0.06) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  border-radius: 12px !important;
-  transition: all 0.2s ease !important;
+  border-radius: 14px !important;
+  transition: all 0.25s ease !important;
 }
 
 .stock-search-modal :deep(.n-input:hover) {
   border-color: rgba(99, 102, 241, 0.4) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
 }
 
 .stock-search-modal :deep(.n-input:focus) {
   border-color: #6366f1 !important;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2), 0 8px 24px rgba(99, 102, 241, 0.15) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
 }
 
 .stock-search-modal :deep(.n-input__input-el) {
@@ -286,45 +311,75 @@ watch(searchQuery, (newVal) => {
   color: rgba(255, 255, 255, 0.3) !important;
 }
 
+.stock-search-modal :deep(.n-input__suffix) {
+  margin-right: 4px;
+}
+
+.stock-search-modal :deep(.n-list) {
+  background: transparent !important;
+}
+
 .stock-search-modal :deep(.n-list-item) {
   background: rgba(255, 255, 255, 0.03) !important;
   border: 1px solid rgba(255, 255, 255, 0.06) !important;
-  border-radius: 12px !important;
-  margin-bottom: 8px !important;
-  transition: all 0.2s ease !important;
+  border-radius: 14px !important;
+  margin-bottom: 10px !important;
+  transition: all 0.25s ease !important;
+  padding: 14px 16px !important;
 }
 
 .stock-search-modal :deep(.n-list-item:hover) {
   background: rgba(99, 102, 241, 0.12) !important;
   border-color: rgba(99, 102, 241, 0.3) !important;
+  transform: translateX(4px);
+}
+
+.stock-search-modal :deep(.n-thing) {
+  padding: 0 !important;
+}
+
+.stock-search-modal :deep(.n-thing-main) {
+  gap: 4px;
 }
 
 .stock-search-modal :deep(.n-thing-title) {
   color: #fff !important;
-  font-weight: 500 !important;
+  font-weight: 600 !important;
+  font-size: 15px !important;
 }
 
 .stock-search-modal :deep(.n-thing-description) {
   color: rgba(255, 255, 255, 0.4) !important;
-  font-size: 12px !important;
+  font-size: 13px !important;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .stock-search-modal :deep(.n-divider) {
   border-color: rgba(255, 255, 255, 0.08) !important;
-  margin: 12px 0 !important;
+  margin: 16px 0 !important;
 }
 
 .stock-search-modal :deep(.n-button--primary-type) {
   background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
   border: none !important;
-  border-radius: 12px !important;
+  border-radius: 14px !important;
   font-weight: 600 !important;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3) !important;
-  transition: all 0.2s ease !important;
+  font-size: 15px !important;
+  height: 46px !important;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35) !important;
+  transition: all 0.25s ease !important;
 }
 
 .stock-search-modal :deep(.n-button--primary-type:hover) {
   transform: translateY(-2px) !important;
-  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4) !important;
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.45) !important;
+}
+
+.stock-search-modal :deep(.n-spin) {
+  min-height: 100px;
+}
+
+.stock-search-modal :deep(.n-empty) {
+  padding: 32px 0;
 }
 </style>

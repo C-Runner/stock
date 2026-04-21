@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -119,7 +120,8 @@ func parseSinaResponse(body string, code string) (*models.StockQuote, error) {
 	quote.Name = gbkToUtf8(fields[0])
 
 	quote.Open = parseFloat(fields[1])
-	quote.Current = parseFloat(fields[3]) // fields[2] is yesterday close, fields[3] is current price
+	quote.PrevClose = parseFloat(fields[2]) // Yesterday's close price
+	quote.Current = parseFloat(fields[3]) // Current price
 	quote.High = parseFloat(fields[4])
 	quote.Low = parseFloat(fields[5])
 
@@ -169,4 +171,164 @@ func gbkToUtf8(s string) string {
 		return s
 	}
 	return result
+}
+
+// TencentFinanceAPI fetches stock quote from Tencent Finance API
+func TencentFinanceAPI(code string) (*models.StockQuote, error) {
+	tencentCode := convertToTencentCode(code)
+
+	url := fmt.Sprintf("https://qt.gtimg.cn/q=%s", tencentCode)
+
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Referer", "https://finance.qq.com")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch quote: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	return parseTencentResponse(string(body), code)
+}
+
+// convertToTencentCode converts stock code to Tencent Finance format
+func convertToTencentCode(code string) string {
+	code = strings.ToLower(code)
+	if strings.HasPrefix(code, "sh") || strings.HasPrefix(code, "sz") {
+		return code
+	}
+	if len(code) == 6 {
+		prefix := code[:3]
+		switch {
+		case prefix >= "600" && prefix <= "603" || prefix == "688":
+			return "sh" + code
+		case prefix >= "000" && prefix <= "003" || prefix >= "200" && prefix <= "299" || prefix >= "300" && prefix <= "399":
+			return "sz" + code
+		}
+	}
+	return "sh" + code
+}
+
+// parseTencentResponse parses Tencent Finance API response
+func parseTencentResponse(body string, code string) (*models.StockQuote, error) {
+	// Response format: v_pv_gal_s_sh600519="~贵州茅台~1700.00~1688.00~1695.00~1705.00~1680.00~1698.00~...";
+	if !strings.Contains(body, `"`) {
+		return nil, fmt.Errorf("invalid response format")
+	}
+
+	// Find the data between quotes
+	start := strings.Index(body, `"`)
+	end := strings.LastIndex(body, `"`)
+	if start == -1 || end == -1 || start >= end {
+		return nil, fmt.Errorf("invalid response format")
+	}
+
+	dataStr := body[start+1 : end]
+	fields := strings.Split(dataStr, "~")
+
+	if len(fields) < 50 {
+		return nil, fmt.Errorf("insufficient data fields: expected ~50, got %d", len(fields))
+	}
+
+	quote := &models.StockQuote{
+		Code: code,
+	}
+
+	quote.Name = fields[1]
+	quote.PrevClose = parseFloat(fields[4])
+	quote.Open = parseFloat(fields[5])
+	quote.Volume = parseInt64(fields[6])
+	quote.High = parseFloat(fields[33])
+	quote.Low = parseFloat(fields[34])
+	quote.Current = parseFloat(fields[3])
+	quote.Amount = parseFloat(fields[38])
+
+	// Update time from fields
+	updateTime := fields[30] + " " + fields[31]
+	quote.UpdateTime = updateTime
+
+	return quote, nil
+}
+
+// CrossValidationResult holds comparison results between two data sources
+type CrossValidationResult struct {
+	Source1     string
+	Source2     string
+	Code        string
+	FieldsDiff  map[string]float64 // field name -> absolute difference
+	MaxDiff     float64
+	IsValid     bool
+	Tolerance   float64 // percentage tolerance (e.g., 0.01 = 1%)
+}
+
+// ValidateWithSecondSource compares data from two sources and returns validation result
+func ValidateWithSecondSource(code string, sinaQuote *models.StockQuote) (*CrossValidationResult, *models.StockQuote, error) {
+	tencentQuote, err := TencentFinanceAPI(code)
+	if err != nil {
+		// If second source fails, log warning but don't fail
+		log.Printf("Warning: Second source (Tencent) failed for %s: %v", code, err)
+		return nil, sinaQuote, nil
+	}
+
+	result := &CrossValidationResult{
+		Source1:    "Sina",
+		Source2:    "Tencent",
+		Code:       code,
+		FieldsDiff: make(map[string]float64),
+		Tolerance:  0.01, // 1% default tolerance
+		IsValid:    true,
+	}
+
+	// Compare key fields
+	compareFields := []struct {
+		name   string
+		val1   float64
+		val2   float64
+	}{
+		{"current", sinaQuote.Current, tencentQuote.Current},
+		{"open", sinaQuote.Open, tencentQuote.Open},
+		{"high", sinaQuote.High, tencentQuote.High},
+		{"low", sinaQuote.Low, tencentQuote.Low},
+		{"prevClose", sinaQuote.PrevClose, tencentQuote.PrevClose},
+	}
+
+	for _, f := range compareFields {
+		if f.val1 > 0 && f.val2 > 0 {
+			diff := abs(f.val1 - f.val2)
+			avg := (f.val1 + f.val2) / 2
+			if avg > 0 {
+				pctDiff := diff / avg
+				result.FieldsDiff[f.name] = pctDiff
+				if pctDiff > result.Tolerance {
+					result.IsValid = false
+				}
+				if pctDiff > result.MaxDiff {
+					result.MaxDiff = pctDiff
+				}
+			}
+		}
+	}
+
+	return result, tencentQuote, nil
+}
+
+func abs(x float64) float64 {
+	if x < 0 {
+		return -x
+	}
+	return x
 }

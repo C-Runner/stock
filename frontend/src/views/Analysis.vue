@@ -26,8 +26,8 @@
         </div>
         <div class="stock-price" v-if="quote">
           <span class="price">¥{{ quote.current.toFixed(2) }}</span>
-          <span :class="['change', quote.current > quote.open ? 'up' : 'down']">
-            {{ quote.current >= quote.open ? '+' : '' }}{{ (((quote.current - quote.open) / quote.open) * 100).toFixed(2) }}%
+          <span :class="['change', quote.current > quote.prevClose ? 'up' : 'down']">
+            {{ quote.current >= quote.prevClose ? '+' : '' }}{{ (((quote.current - quote.prevClose) / quote.prevClose) * 100).toFixed(2) }}%
           </span>
         </div>
       </div>
