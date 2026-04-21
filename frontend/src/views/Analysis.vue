@@ -1,15 +1,28 @@
 <template>
   <div class="analysis">
-    <n-space vertical :size="20">
+    <div class="background">
+      <div class="gradient-orb orb-1"></div>
+      <div class="gradient-orb orb-2"></div>
+    </div>
+
+    <n-space vertical :size="20" class="content">
       <div class="stock-header">
-        <n-button @click="goBack" quaternary>
+        <n-button @click="goBack" quaternary class="back-btn">
           <template #icon>
             <n-icon><IconArrowBack /></n-icon>
           </template>
         </n-button>
         <div class="stock-info" v-if="quote">
-          <h2 class="stock-name">{{ quote.name }}</h2>
-          <span class="stock-code">{{ stockCode }}</span>
+          <div class="logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 3v18h18"/>
+              <path d="M18 9l-5 5-4-4-3 3"/>
+            </svg>
+          </div>
+          <div class="stock-text">
+            <h2 class="stock-name">{{ quote.name }}</h2>
+            <span class="stock-code">{{ stockCode }}</span>
+          </div>
         </div>
         <div class="stock-price" v-if="quote">
           <span class="price">¥{{ quote.current.toFixed(2) }}</span>
@@ -303,34 +316,115 @@ onMounted(() => {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  background: #000;
   min-height: calc(100vh - 60px);
   box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  padding: 40px 24px;
+}
+
+.background {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.gradient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.4;
+}
+
+.orb-1 {
+  width: 500px;
+  height: 500px;
+  background: #6366f1;
+  top: -150px;
+  left: -100px;
+  animation: float 8s ease-in-out infinite;
+}
+
+.orb-2 {
+  width: 400px;
+  height: 400px;
+  background: #8b5cf6;
+  bottom: -100px;
+  right: -100px;
+  animation: float 10s ease-in-out infinite reverse;
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(30px, -30px); }
+}
+
+.content {
+  position: relative;
 }
 
 .stock-header {
   display: flex;
   align-items: center;
   gap: 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2));
+  border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 20px 24px;
-  border-radius: 12px;
+  border-radius: 20px;
+  backdrop-filter: blur(20px);
   color: white;
+  transition: all 0.3s ease;
+}
+
+.stock-header:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.15);
+}
+
+.back-btn {
+  color: rgba(255, 255, 255, 0.8) !important;
 }
 
 .stock-info {
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  width: 44px;
+  height: 44px;
+  padding: 8px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo svg {
+  width: 100%;
+  height: 100%;
+  color: #fff;
+}
+
+.stock-text {
+  display: flex;
+  flex-direction: column;
 }
 
 .stock-name {
   margin: 0;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 600;
+  color: #fff;
 }
 
 .stock-code {
-  font-size: 14px;
-  opacity: 0.8;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .stock-price {
@@ -339,35 +433,49 @@ onMounted(() => {
 
 .stock-price .price {
   display: block;
-  font-size: 28px;
+  font-size: 26px;
   font-weight: bold;
+  color: #fff;
 }
 
 .stock-price .change {
   display: inline-block;
-  font-size: 14px;
-  padding: 2px 8px;
-  border-radius: 4px;
-  background: rgba(255,255,255,0.2);
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  font-weight: 500;
+  backdrop-filter: blur(4px);
 }
 
 .analysis-card {
-  border-radius: 12px;
-  background: #1a1a1a !important;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(20px);
 }
 
-.analysis-card :deep(.n-card) {
-  background: #1a1a1a !important;
-  border: 1px solid #333 !important;
+.analysis-card :deep(.n-card-header) {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  padding: 16px 20px !important;
+}
+
+.analysis-card :deep(.n-card__content) {
+  padding: 20px !important;
 }
 
 .card-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font-weight: 600;
   font-size: 16px;
   color: #fff;
+}
+
+.card-header :deep(.n-icon) {
+  color: #6366f1 !important;
 }
 
 .stats-grid {
@@ -379,44 +487,62 @@ onMounted(() => {
 .stat-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  transition: all 0.2s ease;
+}
+
+.stat-item:hover {
+  background: rgba(99, 102, 241, 0.06);
+  border-color: rgba(99, 102, 241, 0.15);
 }
 
 .stat-label {
-  font-size: 12px;
-  color: #999;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
 }
 
 .stat-value {
-  font-size: 16px;
-  font-weight: 500;
+  font-size: 17px;
+  font-weight: 600;
   color: #fff;
 }
 
 .stat-value.highlight {
-  color: #667eea;
-  font-weight: 600;
+  color: #6366f1;
+  font-weight: 700;
 }
 
 .profit-section {
   display: flex;
   justify-content: space-around;
+  padding: 16px 0;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 14px;
+  margin-top: 8px;
 }
 
 .profit-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  padding: 8px 24px;
 }
 
 .profit-label {
-  font-size: 14px;
-  color: #999;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .profit-value {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: bold;
 }
 
@@ -427,7 +553,7 @@ onMounted(() => {
 .tech-title {
   margin: 0 0 12px 0;
   font-size: 14px;
-  color: #999;
+  color: rgba(255, 255, 255, 0.5);
   font-weight: 500;
 }
 
@@ -445,20 +571,31 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 12px;
-  background: #1a1a1a;
-  border-radius: 8px;
+  padding: 14px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  transition: all 0.2s ease;
+}
+
+.tech-item:hover {
+  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.2);
+  transform: translateY(-2px);
 }
 
 .tech-label {
-  font-size: 12px;
-  color: #888;
-  margin-bottom: 4px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
 }
 
 .tech-value {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 600;
   color: #fff;
 }
 
@@ -472,20 +609,31 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 12px;
-  background: #1a1a1a;
-  border-radius: 8px;
+  padding: 14px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  transition: all 0.2s ease;
+}
+
+.quote-item:hover {
+  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.2);
 }
 
 .quote-label {
-  font-size: 12px;
-  color: #888;
-  margin-bottom: 4px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
 }
 
 .quote-value {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
 }
 
 .quote-value.time {
@@ -493,26 +641,26 @@ onMounted(() => {
 }
 
 .up {
-  color: #e74c3c;
+  color: #ff6b6b;
 }
 
 .down {
-  color: #27ae60;
+  color: #38ef7d;
 }
 
 .overbought {
-  color: #e74c3c;
+  color: #ff6b6b;
   font-weight: bold;
 }
 
 .oversold {
-  color: #27ae60;
+  color: #38ef7d;
   font-weight: bold;
 }
 
 @media (max-width: 768px) {
   .analysis {
-    padding: 12px;
+    padding: 24px 16px;
   }
 
   .stats-grid {
@@ -535,6 +683,7 @@ onMounted(() => {
 
   .stock-info, .stock-price {
     text-align: center;
+    justify-content: center;
   }
 
   .stock-price .price {
@@ -544,8 +693,8 @@ onMounted(() => {
 
 @media (max-width: 480px) {
   .analysis {
-    padding: 8px;
-    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    padding: 16px 12px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
   }
 
   .stock-header {

@@ -69,19 +69,19 @@ const getMAData = (period: number) => {
 }
 
 const option = computed<EChartsOption>(() => ({
-  backgroundColor: '#1a1a1a',
+  backgroundColor: 'rgba(10, 10, 15, 0.8)',
   animation: false,
   tooltip: {
     trigger: 'axis',
     axisPointer: { type: 'cross' },
-    backgroundColor: '#333',
-    borderColor: '#555',
-    textStyle: { color: '#fff' }
+    backgroundColor: 'rgba(30, 27, 75, 0.95)',
+    borderColor: 'rgba(99, 102, 241, 0.3)',
+    textStyle: { color: 'rgba(255, 255, 255, 0.9)' }
   },
   legend: {
     data: ['Candlestick', 'MA5', 'MA10', 'MA20', 'Volume'],
     top: 0,
-    textStyle: { color: '#999' }
+    textStyle: { color: 'rgba(255, 255, 255, 0.6)' }
   },
   grid: [
     { left: '10%', right: '8%', top: '10%', height: '50%' },
@@ -92,32 +92,32 @@ const option = computed<EChartsOption>(() => ({
       type: 'category',
       data: dates.value,
       gridIndex: 0,
-      axisLine: { lineStyle: { color: '#333' } },
-      axisLabel: { color: '#666' }
+      axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } },
+      axisLabel: { color: 'rgba(255, 255, 255, 0.5)' }
     },
     {
       type: 'category',
       data: dates.value,
       gridIndex: 1,
-      axisLine: { lineStyle: { color: '#333' } },
-      axisLabel: { color: '#666' }
+      axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } },
+      axisLabel: { color: 'rgba(255, 255, 255, 0.5)' }
     }
   ],
   yAxis: [
     {
       scale: true,
       gridIndex: 0,
-      splitLine: { lineStyle: { color: '#222' } },
-      axisLine: { lineStyle: { color: '#333' } },
-      axisLabel: { color: '#666' }
+      splitLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.05)' } },
+      axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } },
+      axisLabel: { color: 'rgba(255, 255, 255, 0.5)' }
     },
     {
       scale: true,
       gridIndex: 1,
       splitNumber: 2,
-      splitLine: { lineStyle: { color: '#222' } },
-      axisLine: { lineStyle: { color: '#333' } },
-      axisLabel: { color: '#666' }
+      splitLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.05)' } },
+      axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } },
+      axisLabel: { color: 'rgba(255, 255, 255, 0.5)' }
     }
   ],
   dataZoom: [

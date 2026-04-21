@@ -175,21 +175,34 @@ onUnmounted(() => stopAutoRefresh())
 
 <template>
   <div class="watchlist">
+    <div class="background">
+      <div class="gradient-orb orb-1"></div>
+      <div class="gradient-orb orb-2"></div>
+      <div class="gradient-orb orb-3"></div>
+    </div>
+
     <div class="watchlist-header">
       <div class="header-left">
-        <h1>Watchlist</h1>
-        <p class="subtitle">Track your favorite stocks</p>
+        <div class="logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+          </svg>
+        </div>
+        <div class="header-text">
+          <h1>Watchlist</h1>
+          <p class="subtitle">Track your favorite stocks</p>
+        </div>
       </div>
       <n-space>
-        <n-button type="primary" @click="showSearch = true">
+        <n-button type="primary" @click="showSearch = true" class="add-btn">
           <template #icon>
             <n-icon><IconSearch /></n-icon>
           </template>
           Add Stock
         </n-button>
-        <n-button @click="fetchQuotes" :loading="refreshing">
+        <n-button @click="fetchQuotes" :loading="refreshing" class="refresh-btn" style="background: rgba(255, 255, 255, 0.05) !important;">
           <template #icon>
-            <n-icon><IconRefresh /></n-icon>
+            <n-icon style="background: transparent !important;"><IconRefresh /></n-icon>
           </template>
         </n-button>
       </n-space>
@@ -256,100 +269,307 @@ onUnmounted(() => stopAutoRefresh())
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  background: #000;
   min-height: calc(100vh - 60px);
-  padding: 20px;
+  padding: 40px 24px;
   box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+}
+
+.background {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.gradient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.4;
+}
+
+.orb-1 {
+  width: 500px;
+  height: 500px;
+  background: #6366f1;
+  top: -150px;
+  right: -100px;
+  animation: float 8s ease-in-out infinite;
+}
+
+.orb-2 {
+  width: 400px;
+  height: 400px;
+  background: #8b5cf6;
+  bottom: -100px;
+  left: -100px;
+  animation: float 10s ease-in-out infinite reverse;
+}
+
+.orb-3 {
+  width: 300px;
+  height: 300px;
+  background: #06b6d4;
+  top: 50%;
+  left: 30%;
+  transform: translate(-50%, -50%);
+  animation: pulse 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(30px, -30px); }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.3; }
+  50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.5; }
 }
 
 .watchlist-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 32px;
+  position: relative;
 }
 
-.header-left h1 {
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.logo {
+  width: 48px;
+  height: 48px;
+  padding: 10px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo svg {
+  width: 100%;
+  height: 100%;
+  color: #fff;
+}
+
+.header-text h1 {
   margin: 0;
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 600;
   color: #fff;
+  letter-spacing: -0.5px;
 }
 
 .subtitle {
   margin: 4px 0 0;
-  color: #999;
+  color: rgba(255, 255, 255, 0.5);
   font-size: 14px;
 }
 
-.refresh-card {
-  margin-bottom: 16px;
-  background: #1a1a1a !important;
-  border-radius: 12px;
+.add-btn {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+  border: none !important;
+  font-weight: 600;
 }
 
-.refresh-card :deep(.n-card) {
-  background: #1a1a1a !important;
-  border: 1px solid #333 !important;
+.add-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+}
+
+.refresh-btn {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.refresh-btn .n-button__icon {
+  background: transparent !important;
+}
+
+.refresh-btn .n-icon {
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.refresh-btn .n-icon svg {
+  background: transparent !important;
+  fill: currentColor !important;
+}
+
+.refresh-card {
+  margin-bottom: 20px;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 20px;
+  backdrop-filter: blur(20px);
+  position: relative;
+}
+
+.refresh-card :deep(.n-card-content) {
+  padding: 16px 20px !important;
 }
 
 .refresh-controls {
   display: flex;
   align-items: center;
   gap: 24px;
+  flex-wrap: wrap;
 }
 
 .refresh-toggle {
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: #999;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.refresh-toggle :deep(.n-switch) {
+  --n-rail-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 .refresh-interval {
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: #999;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+}
+
+.refresh-interval :deep(.n-button-group) {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 10px !important;
+  overflow: hidden;
+}
+
+.refresh-interval :deep(.n-button) {
+  background: transparent !important;
+  border: none !important;
+  color: rgba(255, 255, 255, 0.6) !important;
+  font-size: 12px !important;
+  padding: 6px 12px !important;
+  transition: all 0.2s ease !important;
+}
+
+.refresh-interval :deep(.n-button:hover) {
+  color: #fff !important;
+  background: rgba(99, 102, 241, 0.15) !important;
+}
+
+.refresh-interval :deep(.n-button--type-primary) {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+  color: #fff !important;
 }
 
 .last-refresh {
-  color: #666;
+  color: rgba(255, 255, 255, 0.4);
   font-size: 12px;
   margin-left: auto;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
 }
 
 .table-card {
-  background: #1a1a1a !important;
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 20px;
+  backdrop-filter: blur(20px);
+  position: relative;
 }
 
-.table-card :deep(.n-card) {
-  background: #1a1a1a !important;
-  border: 1px solid #333 !important;
+.table-card :deep(.n-card__content) {
+  padding: 16px !important;
+}
+
+.table-card :deep(.n-data-table) {
+  font-size: 14px;
+  background: transparent !important;
+}
+
+.table-card :deep(.n-data-table-th) {
+  background: transparent !important;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+.table-card :deep(.n-data-table-td) {
+  background: transparent !important;
+  color: #fff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+}
+
+.table-card :deep(.n-data-table-tr) {
+  background: transparent !important;
+}
+
+.table-card :deep(.n-data-table-tr:hover .n-data-table-td) {
+  background: rgba(99, 102, 241, 0.08) !important;
+}
+
+.table-card :deep(.n-base-table) {
+  background: transparent !important;
+}
+
+.table-card :deep(.n-base-table-tbody) {
+  background: transparent !important;
 }
 
 .change-up {
-  color: #ef5350;
+  color: #ff6b6b;
 }
 
 .change-down {
-  color: #26a69a;
+  color: #38ef7d;
 }
 
 @media (max-width: 768px) {
   .watchlist {
-    padding: 12px;
+    padding: 24px 16px;
   }
 
   .watchlist-header {
     flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
+    gap: 20px;
+    align-items: center;
+    text-align: center;
+  }
+
+  .header-left {
+    flex-direction: column;
   }
 
   .refresh-controls {
     flex-wrap: wrap;
+    justify-content: center;
   }
+}
+
+.refresh-btn :deep(.n-button__icon) {
+  background: transparent !important;
+}
+
+.refresh-btn :deep(.n-icon) {
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.table-card :deep(.n-button__icon) {
+  background: transparent !important;
+}
+
+.table-card :deep(.n-icon) {
+  background: transparent !important;
 }
 </style>

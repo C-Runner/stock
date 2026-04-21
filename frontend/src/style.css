@@ -18,7 +18,7 @@ html, body {
   padding: 0;
   width: 100%;
   height: 100%;
-  background: #000;
+  background: #0a0a0f;
   overflow-x: hidden;
 }
 
@@ -29,22 +29,23 @@ html, body {
 
 /* Dark theme overrides for naive-ui */
 .n-card {
-  --n-color: #1a1a1a !important;
-  --n-border-color: #333 !important;
+  --n-color: rgba(20, 19, 60, 0.7) !important;
+  --n-border-color: rgba(99, 102, 241, 0.2) !important;
   --n-text-color: #fff !important;
   --n-title-text-color: #fff !important;
 }
 
 .n-card__content {
-  background: #1a1a1a !important;
+  background: rgba(20, 19, 60, 0.7) !important;
   color: #fff !important;
 }
 
 .n-button {
-  --n-color: #333 !important;
-  --n-color-hover: #444 !important;
-  --n-color-pressed: #222 !important;
+  --n-color: rgba(255, 255, 255, 0.06) !important;
+  --n-color-hover: rgba(255, 255, 255, 0.1) !important;
+  --n-color-pressed: rgba(255, 255, 255, 0.04) !important;
   --n-text-color: #fff !important;
+  border-radius: 10px !important;
 }
 
 .n-button--primary-type {
@@ -65,52 +66,52 @@ html, body {
 }
 
 .n-data-table {
-  --n-th-text-color: #999 !important;
+  --n-th-text-color: rgba(255, 255, 255, 0.6) !important;
   --n-td-text-color: #fff !important;
-  --n-th-color: #1a1a1a !important;
-  --n-td-color: #1a1a1a !important;
-  --n-border-color: #333 !important;
+  --n-th-color: transparent !important;
+  --n-td-color: transparent !important;
+  --n-border-color: rgba(255, 255, 255, 0.06) !important;
 }
 
 .n-input .n-input__input-el,
 .n-input input,
 .n-input__input-el,
 .n-input__textarea-el {
-  background-color: #1a1a1a !important;
-  background: #1a1a1a !important;
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
   color: #fff !important;
   -webkit-text-fill-color: #fff !important;
 }
 
 .n-input-wrapper {
-  background: #1a1a1a !important;
+  background: rgba(255, 255, 255, 0.06) !important;
 }
 
 .n-input-number {
-  --n-color: #1a1a1a !important;
-  --n-color-focus: #222 !important;
-  --n-border: 1px solid #333 !important;
+  --n-color: rgba(255, 255, 255, 0.06) !important;
+  --n-color-focus: rgba(255, 255, 255, 0.08) !important;
+  --n-border: 1px solid rgba(255, 255, 255, 0.1) !important;
   --n-text-color: #fff !important;
 }
 
 .n-form-item .n-form-item-label {
-  --n-text-color: #999 !important;
+  --n-text-color: rgba(255, 255, 255, 0.6) !important;
 }
 
 .n-modal {
-  --n-color: #1a1a1a !important;
+  --n-color: rgba(20, 19, 60, 0.95) !important;
 }
 
 .n-dialog {
-  --n-color: #1a1a1a !important;
+  --n-color: rgba(20, 19, 60, 0.95) !important;
 }
 
 .n-modal-card {
-  background: #1a1a1a !important;
+  background: rgba(20, 19, 60, 0.95) !important;
 }
 
 .n-modal-card__content {
-  background: #1a1a1a !important;
+  background: rgba(20, 19, 60, 0.95) !important;
   color: #fff !important;
 }
 
@@ -123,7 +124,7 @@ html, body {
 }
 
 .n-descriptions-label, .n-descriptions-item {
-  color: #999 !important;
+  color: rgba(255, 255, 255, 0.6) !important;
 }
 
 .n-descriptions-item__text {
@@ -131,15 +132,15 @@ html, body {
 }
 
 .n-tabs .n-tabs-tab {
-  color: #999 !important;
+  color: rgba(255, 255, 255, 0.6) !important;
 }
 
 .n-tabs .n-tabs-tab--active {
-  color: #667eea !important;
+  color: #6366f1 !important;
 }
 
 .n-tabs .n-tabs-bar {
-  background: #667eea !important;
+  background: #6366f1 !important;
 }
 
 .n-spin-container {
@@ -147,9 +148,9 @@ html, body {
 }
 
 .n-empty .n-empty-description {
-  color: #666 !important;
+  color: rgba(255, 255, 255, 0.4) !important;
 }
 
 .n-divider {
-  border-color: #333 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
 }

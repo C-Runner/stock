@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8080'
+const API_BASE_URL = ''
 
 export interface HealthResponse {
   status: string
@@ -131,55 +131,82 @@ const getAuthHeaders = () => {
 
 export const api = {
   async get<T>(path: string): Promise<T> {
-    const response = await fetch(`${API_BASE_URL}${path}`, {
-      method: 'GET',
-      headers: getAuthHeaders()
-    })
-    if (response.status === 401) {
-      localStorage.removeItem('token')
-      localStorage.removeItem('tokenExpiry')
-      window.location.href = '/login'
-      throw new Error('Unauthorized')
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 10000)
+    try {
+      const response = await fetch(`${API_BASE_URL}${path}`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+        signal: controller.signal
+      })
+      clearTimeout(timeout)
+      if (response.status === 401) {
+        localStorage.removeItem('token')
+        localStorage.removeItem('tokenExpiry')
+        window.location.href = '/login'
+        throw new Error('Unauthorized')
+      }
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`)
+      }
+      return response.json()
+    } catch (e) {
+      clearTimeout(timeout)
+      throw e
     }
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.status}`)
-    }
-    return response.json()
   },
 
   async post<T>(path: string, data: unknown): Promise<T> {
-    const response = await fetch(`${API_BASE_URL}${path}`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(data)
-    })
-    if (response.status === 401) {
-      localStorage.removeItem('token')
-      localStorage.removeItem('tokenExpiry')
-      window.location.href = '/login'
-      throw new Error('Unauthorized')
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 10000)
+    try {
+      const response = await fetch(`${API_BASE_URL}${path}`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data),
+        signal: controller.signal
+      })
+      clearTimeout(timeout)
+      if (response.status === 401) {
+        localStorage.removeItem('token')
+        localStorage.removeItem('tokenExpiry')
+        window.location.href = '/login'
+        throw new Error('Unauthorized')
+      }
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`)
+      }
+      return response.json()
+    } catch (e) {
+      clearTimeout(timeout)
+      throw e
     }
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.status}`)
-    }
-    return response.json()
   },
 
   async delete<T>(path: string): Promise<T> {
-    const response = await fetch(`${API_BASE_URL}${path}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders()
-    })
-    if (response.status === 401) {
-      localStorage.removeItem('token')
-      localStorage.removeItem('tokenExpiry')
-      window.location.href = '/login'
-      throw new Error('Unauthorized')
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 10000)
+    try {
+      const response = await fetch(`${API_BASE_URL}${path}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+        signal: controller.signal
+      })
+      clearTimeout(timeout)
+      if (response.status === 401) {
+        localStorage.removeItem('token')
+        localStorage.removeItem('tokenExpiry')
+        window.location.href = '/login'
+        throw new Error('Unauthorized')
+      }
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`)
+      }
+      return response.json()
+    } catch (e) {
+      clearTimeout(timeout)
+      throw e
     }
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.status}`)
-    }
-    return response.json()
   }
 }
 

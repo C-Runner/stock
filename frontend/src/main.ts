@@ -10,7 +10,7 @@ app.use(router)
 // Apply dark theme globally
 const meta = document.createElement('meta')
 meta.name = 'theme-color'
-meta.content = '#000000'
+meta.content = '#0a0a0f'
 document.head.appendChild(meta)
 
 app.mount('#app')
