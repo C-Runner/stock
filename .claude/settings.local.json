@@ -7,7 +7,19 @@
       "Bash(go build:*)",
       "Bash(find /e/work/stock/frontend -type f -name *.ts -o -name *.vue -o -name *.js)",
       "Bash(npm run:*)",
-      "Bash(curl -s \"http://hq.sinajs.cn/list=sh600831\" -H \"Referer: http://finance.sina.com.cn\")"
+      "Bash(curl -s \"http://hq.sinajs.cn/list=sh600831\" -H \"Referer: http://finance.sina.com.cn\")",
+      "Read(//home/vento/.claude/skills/skill-creator/**)",
+      "Bash(python -m scripts.package_skill staged-commit-review)",
+      "Bash(echo $HOME/go/bin)",
+      "Read(//home/vento/workspace/stock/$HOME/go/**)",
+      "WebSearch",
+      "Bash(npx vue-tsc:*)",
+      "Bash(sed -n '202,210p' /home/vento/workspace/stock/frontend/src/views/Home.vue)",
+      "Bash(sed -n '253,268p' /home/vento/workspace/stock/frontend/src/views/Home.vue)",
+      "Bash(curl -s \"http://localhost:5173/src/views/Login.vue\")",
+      "Bash(curl -sI \"http://localhost:5173/\")",
+      "Bash(pkill -f \"vite\")",
+      "Bash(rm -rf node_modules/.vite)"
     ]
   }
 }

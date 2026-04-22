@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, h, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import {
-  NButton, NCard, NDataTable, NSpace, NIcon,
+  NButton, NDataTable, NSpace, NIcon,
   NSwitch, NSpin, NEmpty, NButtonGroup
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
@@ -11,7 +10,6 @@ import { IconSearch, IconRefresh, IconBackup } from '../components/icons'
 import { formatVolume } from '../utils/format'
 import StockSearch from '../components/StockSearch.vue'
 
-const router = useRouter()
 
 const watchlist = ref<WatchlistItem[]>([])
 const quotes = ref<Map<string, StockQuote>>(new Map())
@@ -35,18 +33,31 @@ interface WatchlistRow {
 }
 
 const columns: DataTableColumns<WatchlistRow> = [
-  { title: 'Code', key: 'code', width: 100 },
-  { title: 'Name', key: 'name', ellipsis: { tooltip: true } },
+  {
+    title: 'Stock',
+    key: 'stock',
+    width: 90,
+    render: (row) => h('div', { class: 'stock-cell' }, [
+      h('div', {
+        class: 'stock-name',
+        onClick: (e: MouseEvent) => {
+          e.stopPropagation()
+          window.location.href = `/analysis/${row.code}`
+        }
+      }, row.name),
+      h('div', { class: 'stock-code' }, row.code)
+    ])
+  },
   {
     title: 'Price',
     key: 'price',
-    width: 120,
+    width: 90,
     render: (row) => row.quote ? `¥${row.quote.current.toFixed(2)}` : '-'
   },
   {
     title: 'Change',
     key: 'change',
-    width: 100,
+    width: 90,
     render: (row) => {
       if (!row.quote) return '-'
       const rate = row.quote.prevClose > 0
@@ -60,27 +71,19 @@ const columns: DataTableColumns<WatchlistRow> = [
   {
     title: 'Volume',
     key: 'volume',
-    width: 120,
+    width: 90,
     render: (row) => row.quote ? formatVolume(row.quote.volume) : '-'
   },
   {
     title: 'Action',
     key: 'actions',
-    width: 200,
-    render: (row) => h(NSpace, { size: 'small' }, () => [
-      h(NButton, {
-        size: 'small',
-        type: 'primary',
-        quaternary: true,
-        onClick: () => router.push(`/analysis/${row.code}`)
-      }, () => 'Analysis'),
-      h(NButton, {
-        size: 'small',
-        type: 'error',
-        quaternary: true,
-        onClick: () => handleRemove(row.code)
-      }, () => 'Remove')
-    ])
+    width: 80,
+    render: (row) => h(NButton, {
+      size: 'small',
+      type: 'error',
+      quaternary: true,
+      onClick: (e: Event) => { e.stopPropagation(); handleRemove(row.code) }
+    }, () => 'Remove')
   }
 ]
 
@@ -90,6 +93,16 @@ const tableData = computed<WatchlistRow[]>(() =>
     quote: quotes.value.get(item.code) || null
   }))
 )
+
+const rowProps = (row: WatchlistRow) => {
+  const goToAnalysis = () => {
+    window.location.href = `/analysis/${row.code}`
+  }
+  return {
+    style: 'cursor: pointer',
+    onClick: goToAnalysis
+  }
+}
 
 const fetchWatchlist = async () => {
   loading.value = true
@@ -239,14 +252,13 @@ onUnmounted(() => stopAutoRefresh())
       </n-space>
     </div>
 
-    <n-card class="refresh-card" :bordered="false">
-      <div class="refresh-controls">
+    <div class="refresh-card">
+      <div class="refresh-left">
         <div class="refresh-toggle">
           <span>Auto Refresh</span>
           <n-switch v-model:value="autoRefresh" />
         </div>
         <div class="refresh-interval" v-if="autoRefresh">
-          <span>Interval:</span>
           <n-button-group size="small">
             <n-button
               :type="refreshInterval === 10 ? 'primary' : 'default'"
@@ -268,28 +280,36 @@ onUnmounted(() => stopAutoRefresh())
             </n-button>
           </n-button-group>
         </div>
-        <div class="last-refresh" v-if="lastRefresh">
-          Last refresh: {{ lastRefresh.toLocaleTimeString() }}
-        </div>
+      </div>
+      <div class="refresh-right">
         <div class="backup-status" v-if="backupStatus">
           {{ backupStatus }}
         </div>
       </div>
-    </n-card>
+    </div>
 
-    <n-card class="table-card" :bordered="false">
-      <n-spin :show="loading">
-        <n-empty v-if="!loading && tableData.length === 0" description="No stocks in watchlist" />
-        <n-data-table
-          v-else
-          :columns="columns"
-          :data="tableData"
-          :pagination="false"
-          :bordered="false"
-          striped
-        />
-      </n-spin>
-    </n-card>
+    <div class="table-card">
+      <div class="table-header">
+        <span>Watchlist</span>
+        <span class="last-refresh" v-if="lastRefresh">
+          Last: {{ lastRefresh.toLocaleTimeString() }}
+        </span>
+      </div>
+      <div class="table-content">
+        <n-spin :show="loading">
+          <n-empty v-if="!loading && tableData.length === 0" description="No stocks in watchlist" />
+          <n-data-table
+            v-else
+            :columns="columns"
+            :data="tableData"
+            :pagination="false"
+            :bordered="false"
+            striped
+            :row-props="rowProps"
+          />
+        </n-spin>
+      </div>
+    </div>
 
     <StockSearch
       v-model:show="showSearch"
@@ -304,7 +324,7 @@ onUnmounted(() => stopAutoRefresh())
   max-width: 1200px;
   margin: 0 auto;
   min-height: calc(100vh - 60px);
-  padding: 40px 24px;
+  padding: 16px 24px;
   box-sizing: border-box;
   position: relative;
   overflow: hidden;
@@ -366,22 +386,22 @@ onUnmounted(() => stopAutoRefresh())
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 32px;
+  margin-bottom: 16px;
   position: relative;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .logo {
-  width: 48px;
-  height: 48px;
-  padding: 10px;
+  width: 36px;
+  height: 36px;
+  padding: 8px;
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  border-radius: 14px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -395,16 +415,16 @@ onUnmounted(() => stopAutoRefresh())
 
 .header-text h1 {
   margin: 0;
-  font-size: 26px;
+  font-size: 20px;
   font-weight: 600;
   color: #fff;
   letter-spacing: -0.5px;
 }
 
 .subtitle {
-  margin: 4px 0 0;
+  margin: 2px 0 0;
   color: rgba(255, 255, 255, 0.5);
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .backup-btn {
@@ -420,12 +440,11 @@ onUnmounted(() => stopAutoRefresh())
 
 .backup-status {
   color: #10b981;
-  font-size: 12px;
-  margin-left: 12px;
-  padding: 6px 12px;
+  font-size: 11px;
+  padding: 4px 8px;
   background: rgba(16, 185, 129, 0.1);
   border: 1px solid rgba(16, 185, 129, 0.2);
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 .add-btn {
@@ -459,23 +478,28 @@ onUnmounted(() => stopAutoRefresh())
 }
 
 .refresh-card {
-  margin-bottom: 20px;
-  background: rgba(255, 255, 255, 0.03) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 20px;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
   backdrop-filter: blur(20px);
   position: relative;
+  padding: 10px 16px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.refresh-card :deep(.n-card-content) {
-  padding: 16px 20px !important;
-}
-
-.refresh-controls {
+.refresh-left {
   display: flex;
   align-items: center;
-  gap: 24px;
-  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.refresh-right {
+  display: flex;
+  align-items: center;
 }
 
 .refresh-toggle {
@@ -483,25 +507,35 @@ onUnmounted(() => stopAutoRefresh())
   align-items: center;
   gap: 10px;
   color: rgba(255, 255, 255, 0.7);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
 }
 
 .refresh-toggle :deep(.n-switch) {
   --n-rail-color: rgba(255, 255, 255, 0.1) !important;
+  --n-rail-width: 40px !important;
+  --n-rail-height: 20px !important;
+  --n-button-width: 16px !important;
+  --n-button-height: 16px !important;
+}
+
+.refresh-toggle :deep(.n-switch.n-switch--checked) {
+  --n-rail-color: rgba(99, 102, 241, 0.6) !important;
+}
+
+.refresh-toggle :deep(.n-switch--checked .n-switch__button) {
+  transform: translateX(22px) !important;
 }
 
 .refresh-interval {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 14px;
 }
 
 .refresh-interval :deep(.n-button-group) {
-  background: rgba(255, 255, 255, 0.04) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
   border-radius: 10px !important;
   overflow: hidden;
 }
@@ -511,40 +545,54 @@ onUnmounted(() => stopAutoRefresh())
   border: none !important;
   color: rgba(255, 255, 255, 0.6) !important;
   font-size: 12px !important;
-  padding: 6px 12px !important;
+  padding: 6px 14px !important;
   transition: all 0.2s ease !important;
 }
 
 .refresh-interval :deep(.n-button:hover) {
   color: #fff !important;
-  background: rgba(99, 102, 241, 0.15) !important;
+  background: rgba(99, 102, 241, 0.2) !important;
 }
 
 .refresh-interval :deep(.n-button--type-primary) {
   background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
   color: #fff !important;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
 }
 
 .last-refresh {
   color: rgba(255, 255, 255, 0.4);
-  font-size: 12px;
-  margin-left: auto;
-  padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 400;
 }
 
 .table-card {
-  background: rgba(255, 255, 255, 0.03) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
   border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(20px);
   position: relative;
+  overflow: hidden;
+  padding: 16px;
+  box-sizing: border-box;
 }
 
-.table-card :deep(.n-card__content) {
-  padding: 16px !important;
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-weight: 600;
+  font-size: 16px;
+  color: #fff;
+  gap: 12px;
+}
+
+.table-content {
+  overflow-x: auto;
+  background: transparent !important;
 }
 
 .table-card :deep(.n-data-table) {
@@ -552,25 +600,25 @@ onUnmounted(() => stopAutoRefresh())
   background: transparent !important;
 }
 
+.table-card :deep(.n-data-table-wrapper) {
+  background: transparent !important;
+}
+
 .table-card :deep(.n-data-table-th) {
   background: transparent !important;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.6) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  padding: 6px 6px !important;
 }
 
 .table-card :deep(.n-data-table-td) {
   background: transparent !important;
   color: #fff;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+  padding: 6px 6px !important;
 }
 
 .table-card :deep(.n-data-table-tr) {
   background: transparent !important;
-}
-
-.table-card :deep(.n-data-table-tr:hover .n-data-table-td) {
-  background: rgba(99, 102, 241, 0.08) !important;
 }
 
 .table-card :deep(.n-base-table) {
@@ -581,24 +629,100 @@ onUnmounted(() => stopAutoRefresh())
   background: transparent !important;
 }
 
-.change-up {
-  color: #38ef7d;
+.table-card :deep(.n-base-table-tr) {
+  background: transparent !important;
 }
 
-.change-down {
+.table-card :deep(.n-base-td) {
+  background: transparent !important;
+}
+
+.table-card :deep(.n-data-table-td__cell) {
+  white-space: normal !important;
+}
+
+.table-card :deep(.n-data-table-tr:hover .n-data-table-td) {
+  background: rgba(99, 102, 241, 0.08) !important;
+}
+
+.table-card :deep(.n-data-table-tr) {
+  cursor: pointer;
+}
+
+.change-up {
   color: #ff6b6b;
 }
 
+.change-down {
+  color: #38ef7d;
+}
+
+.code-link {
+  color: #6366f1;
+  cursor: pointer;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.code-link:hover {
+  color: #818cf8;
+  text-decoration: underline;
+}
+
+.stock-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.3;
+}
+
+.stock-name {
+  font-size: 14px;
+  color: #fff;
+  cursor: pointer;
+}
+
+.stock-name:hover {
+  color: #6366f1;
+}
+
+.stock-code {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
 @media (max-width: 768px) {
+  .table-card :deep(.n-data-table) {
+    font-size: 12px;
+  }
+
+  .table-card :deep(.n-data-table-th),
+  .table-card :deep(.n-data-table-td) {
+    padding: 6px 4px;
+  }
+
+  .table-card :deep(.n-data-table-wrapper) {
+    background: transparent !important;
+  }
+
+  .table-card :deep(.n-data-table-tr) {
+    background: transparent !important;
+  }
+
+  .table-card :deep(.n-data-table-td) {
+    background: transparent !important;
+  }
+
   .watchlist {
-    padding: 24px 16px;
+    padding: 12px 12px;
   }
 
   .watchlist-header {
     flex-direction: column;
-    gap: 20px;
+    gap: 12px;
     align-items: center;
     text-align: center;
+    margin-bottom: 12px;
   }
 
   .header-left {
