@@ -19,6 +19,14 @@
           <p class="subtitle">Manage your stock holdings</p>
         </div>
       </div>
+      <div class="header-right">
+        <button class="logout-btn" @click="handleLogout">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
+          </svg>
+          <span>Logout</span>
+        </button>
+      </div>
     </div>
 
     <div class="stats-row">
@@ -232,12 +240,12 @@
       preset="card"
       class="delete-modal"
       :style="{
-        '--n-color': 'rgba(20, 19, 60, 0.7)',
-        '--n-color-modal': 'rgba(20, 19, 60, 0.7)',
-        background: 'rgba(20, 19, 60, 0.7)',
-        backdropFilter: 'blur(24px)'
+        '--n-color': 'rgba(20, 19, 60, 0.5)',
+        '--n-color-modal': 'rgba(20, 19, 60, 0.5)',
+        background: 'rgba(20, 19, 60, 0.5)',
+        backdropFilter: 'blur(32px) saturate(180%)'
       }"
-      :mask="{ style: 'background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px);' }"
+      :mask="{ style: 'background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(8px) saturate(150%);' }"
       :icon="() => null"
       :mask-closable="false"
     >
@@ -269,7 +277,7 @@ import {
   NButton, NModal, NForm, NFormItem,
   NInput, NInputNumber, NEmpty, NIcon
 } from 'naive-ui'
-import { stockApi, type Stock, type StockRequest } from '../api'
+import { stockApi, authApi, type Stock, type StockRequest } from '../api'
 import { IconPlus, IconWallet, IconCoin, IconTrend, IconDataLine, IconRefresh, IconSearch, IconDelete } from '../components/icons'
 
 const router = useRouter()
@@ -330,7 +338,7 @@ const confirmDelete = async () => {
 }
 
 const goToAnalysis = (code: string) => {
-  window.location.href = `/analysis/${code}`
+  router.push({ path: `/analysis/${code}`, query: { from: '/home' } })
 }
 
 
@@ -396,6 +404,17 @@ const handleAddStock = async () => {
 }
 
 onMounted(() => fetchStocks())
+
+const handleLogout = async () => {
+  try {
+    await authApi.logout()
+  } catch {
+    // ignore error
+  }
+  localStorage.removeItem('token')
+  localStorage.removeItem('tokenExpiry')
+  router.push('/login')
+}
 </script>
 
 <style scoped>
@@ -403,14 +422,16 @@ onMounted(() => fetchStocks())
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  height: 100vh;
+  height: 100dvh;
   box-sizing: border-box;
   position: relative;
   overflow: hidden;
-  padding: 24px;
-  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  padding: 16px;
+  padding-bottom: calc(70px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
+  touch-action: none;
+  user-select: none;
 }
 
 .background {
@@ -469,9 +490,40 @@ onMounted(() => fetchStocks())
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   position: relative;
-  flex-shrink: 0;
+  flex: 0 0 auto;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 107, 107, 0.15);
+  border-color: rgba(255, 107, 107, 0.3);
+  color: #ff6b6b;
+}
+
+.logout-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 .bottom-tabs {
@@ -480,9 +532,11 @@ onMounted(() => fetchStocks())
   left: 0;
   right: 0;
   height: 70px;
-  background: rgba(20, 19, 60, 0.95);
-  backdrop-filter: blur(24px);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(20, 19, 60, 0.4);
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -490,6 +544,7 @@ onMounted(() => fetchStocks())
   padding: 0 24px;
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 100;
+  touch-action: none;
 }
 
 .tab-item {
@@ -573,7 +628,7 @@ onMounted(() => fetchStocks())
 .stats-row {
   margin-bottom: 16px;
   position: relative;
-  flex-shrink: 0;
+  flex: 0 0 auto;
 }
 
 .stat-card {
@@ -589,6 +644,7 @@ onMounted(() => fetchStocks())
   display: flex;
   align-items: stretch;
   justify-content: space-between;
+  gap: 8px;
 }
 
 .stat-item {
@@ -619,19 +675,20 @@ onMounted(() => fetchStocks())
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
+  touch-action: none;
 }
 
 .table-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 16px 16px 10px;
+  margin: 12px 16px 8px;
   padding-bottom: 8px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   font-weight: 600;
   font-size: 16px;
   color: #fff;
-  flex-shrink: 0;
+  flex: 0 0 auto;
 }
 
 .table-content {
@@ -849,7 +906,7 @@ onMounted(() => fetchStocks())
 @media (max-width: 480px) {
   .home {
     padding: 12px 8px;
-    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+    padding-bottom: calc(70px + env(safe-area-inset-bottom));
   }
 
   .home-header {
@@ -892,10 +949,6 @@ onMounted(() => fetchStocks())
 
   .stat-label {
     font-size: 10px;
-  }
-
-  .table-body-wrapper {
-    max-height: calc(100vh - 420px);
   }
 }
 
@@ -1161,13 +1214,6 @@ onMounted(() => fetchStocks())
   fill: currentColor !important;
 }
 
-.table-swipe-wrapper {
-  width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  background: transparent;
-}
-
 .table-container {
   display: flex;
   width: 100%;
@@ -1178,6 +1224,7 @@ onMounted(() => fetchStocks())
   flex: 1;
   min-height: 0;
   flex-direction: column;
+  touch-action: none;
 }
 
 .table-header-row {
@@ -1185,6 +1232,7 @@ onMounted(() => fetchStocks())
   height: 40px;
   flex-shrink: 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  min-width: max-content;
 }
 
 .header-scroll-part {
@@ -1198,7 +1246,8 @@ onMounted(() => fetchStocks())
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  max-height: calc(100vh - 380px);
+  flex-basis: 0;
+  height: 0;
 }
 
 .table-stock-body {
@@ -1208,6 +1257,7 @@ onMounted(() => fetchStocks())
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   background: transparent;
+  touch-action: pan-y;
 }
 
 .table-stock-body::-webkit-scrollbar {
@@ -1220,6 +1270,7 @@ onMounted(() => fetchStocks())
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   min-width: 0;
+  touch-action: pan-x pan-y;
 }
 
 .table-scroll-body::-webkit-scrollbar {
@@ -1233,6 +1284,7 @@ onMounted(() => fetchStocks())
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   cursor: pointer;
   transition: background 0.2s ease;
+  touch-action: none;
 }
 
 .table-stock-row:hover {
@@ -1246,6 +1298,7 @@ onMounted(() => fetchStocks())
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   cursor: pointer;
   transition: background 0.2s ease;
+  touch-action: none;
 }
 
 .table-scroll-row:hover {
@@ -1313,19 +1366,6 @@ onMounted(() => fetchStocks())
   justify-content: center;
 }
 
-.data-row {
-  display: flex;
-  min-width: max-content;
-  background: transparent;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  cursor: pointer;
-  padding: 12px 0;
-}
-
-.data-row:hover {
-  background: rgba(99, 102, 241, 0.08);
-}
-
 .cell-item {
   width: 90px;
   min-width: 90px;
@@ -1345,7 +1385,7 @@ onMounted(() => fetchStocks())
 }
 
 .delete-btn {
-  color: rgba(255, 255, 255, 0.4) !important;
+  color: rgba(255, 107, 107, 0.6) !important;
 }
 
 .delete-btn:hover {
@@ -1369,40 +1409,50 @@ onMounted(() => fetchStocks())
 }
 
 .delete-modal {
-  --n-color: rgba(20, 19, 60, 0.7) !important;
-  --n-border-radius: 16px !important;
-  --n-border: 1px solid rgba(99, 102, 241, 0.2) !important;
+  --n-color: rgba(20, 19, 60, 0.5) !important;
+  --n-border-radius: 20px !important;
+  --n-border: 1px solid rgba(255, 107, 107, 0.15) !important;
   background-color: var(--n-color) !important;
+  backdrop-filter: blur(32px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(180%) !important;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
 }
 
 .delete-modal :deep(.n-card) {
-  background-color: rgba(20, 19, 60, 0.95) !important;
+  background-color: rgba(20, 19, 60, 0.4) !important;
+  backdrop-filter: blur(32px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(180%) !important;
+  border: 1px solid rgba(255, 107, 107, 0.1) !important;
 }
 
 .delete-modal :deep(.n-dialog__close) {
   top: 16px;
   right: 16px;
-  width: 28px;
-  height: 28px;
-  background: rgba(255, 255, 255, 0.05);
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
+  border-radius: 8px;
   color: rgba(255, 255, 255, 0.6) !important;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .delete-modal :deep(.n-dialog__close:hover) {
-  background: rgba(255, 107, 107, 0.15);
+  background: rgba(255, 107, 107, 0.2);
   border-color: rgba(255, 107, 107, 0.3);
   color: #ff6b6b !important;
+  transform: rotate(90deg);
 }
 
 .delete-icon {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, rgba(255, 107, 107, 0.3), rgba(238, 90, 36, 0.3));
   padding: 5px;
   border-radius: 6px;
   width: 22px;
   height: 22px;
+  opacity: 0.7;
 }
 
 .delete-modal-body {
@@ -1417,19 +1467,19 @@ onMounted(() => fetchStocks())
 }
 
 .delete-confirm-btn {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+  background: linear-gradient(135deg, #ff6b6b, #ee5a24) !important;
   border: none !important;
   color: #fff !important;
   font-weight: 600;
   border-radius: 10px;
   padding: 0 20px !important;
   height: 36px !important;
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
-  transition: all 0.2s ease;
+  box-shadow: 0 4px 16px rgba(255, 107, 107, 0.3);
+  transition: all 0.25s ease;
 }
 
 .delete-confirm-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 8px 24px rgba(255, 107, 107, 0.4);
 }
 </style>

@@ -19,7 +19,11 @@
       "Bash(curl -s \"http://localhost:5173/src/views/Login.vue\")",
       "Bash(curl -sI \"http://localhost:5173/\")",
       "Bash(pkill -f \"vite\")",
-      "Bash(rm -rf node_modules/.vite)"
+      "Bash(rm -rf node_modules/.vite)",
+      "Bash(sed -i 's/padding-bottom: calc\\(16px + 70px + env\\(safe-area-inset-bottom\\)\\);/box-sizing: border-box;/' Watchlist.vue)",
+      "Bash(sed -i 's/max-height: calc\\(100vh - 320px\\);/max-height: calc\\(100vh - 280px - 70px - env\\(safe-area-inset-bottom\\)\\);/' Watchlist.vue)",
+      "Bash(git reset:*)",
+      "Bash(git add:*)"
     ]
   }
 }

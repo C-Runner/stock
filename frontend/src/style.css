@@ -19,12 +19,13 @@ html, body {
   width: 100%;
   height: 100%;
   background: #0a0a0f;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 #app {
   width: 100%;
-  min-height: 100vh;
+  height: 100%;
+  overflow: hidden;
 }
 
 /* Dark theme overrides for naive-ui */
@@ -33,11 +34,22 @@ html, body {
   --n-border-color: rgba(99, 102, 241, 0.2) !important;
   --n-text-color: #fff !important;
   --n-title-text-color: #fff !important;
+  border-radius: var(--n-border-radius, 12px) !important;
+  overflow: hidden !important;
 }
 
 .n-card__content {
   background: rgba(20, 19, 60, 0.7) !important;
   color: #fff !important;
+  border-radius: inherit !important;
+}
+
+.n-card-header {
+  border-radius: inherit !important;
+}
+
+.n-base-card {
+  border-radius: inherit !important;
 }
 
 .n-button {

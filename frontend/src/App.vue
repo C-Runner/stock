@@ -1,30 +1,11 @@
 <script setup lang="ts">
-import { NLayout, NLayoutContent, NMessageProvider, NConfigProvider, darkTheme, type GlobalThemeOverrides } from 'naive-ui'
+import { NMessageProvider, NConfigProvider, darkTheme } from 'naive-ui'
 
-const themeOverrides: GlobalThemeOverrides = {
+const themeOverrides = {
   common: {
     primaryColor: '#6366f1',
     primaryColorHover: '#8b5cf6',
     primaryColorPressed: '#4f46e5',
-  },
-  Card: {
-    color: 'rgba(20, 19, 60, 0.7)',
-    borderColor: 'rgba(99, 102, 241, 0.2)',
-    borderRadius: '24px',
-    contentColor: 'rgba(20, 19, 60, 0.7)',
-  },
-  Dialog: {
-    color: 'rgba(20, 19, 60, 0.7)',
-    borderRadius: '24px',
-    border: '1px solid rgba(99, 102, 241, 0.2)',
-  },
-  DataTable: {
-    color: 'transparent',
-    thColor: 'transparent',
-    tdColor: 'transparent',
-    thColorHover: 'transparent',
-    tdColorHover: 'transparent',
-    borderColor: 'transparent',
   }
 }
 </script>
@@ -32,18 +13,20 @@ const themeOverrides: GlobalThemeOverrides = {
 <template>
   <n-config-provider :theme="darkTheme" :theme-overrides="themeOverrides">
     <n-message-provider>
-      <n-layout style="min-height: 100vh" class="dark-layout">
-      <n-layout-content content-style="padding: 0">
+      <div class="app-container">
         <router-view />
-      </n-layout-content>
-    </n-layout>
-  </n-message-provider>
+      </div>
+    </n-message-provider>
   </n-config-provider>
 </template>
 
 <style scoped>
-.dark-layout {
-  background: #0a0a0f !important;
+.app-container {
+  width: 100%;
+  height: 100dvh;
+  background: #0a0a0f;
+  overflow: hidden;
+  position: relative;
 }
 </style>
 

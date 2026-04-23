@@ -5,6 +5,7 @@ import (
 	"backend/handlers"
 	"backend/models"
 	"backend/services"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -27,7 +28,13 @@ func main() {
 		log.Printf("Warning: Failed to connect to PostgreSQL: %v", err)
 	} else {
 		defer config.DisconnectPostgres()
-		config.DB.AutoMigrate(&models.Stock{}, &models.WatchlistItem{}, &models.StockDailySnapshot{})
+		config.DB.AutoMigrate(&models.User{}, &models.Stock{}, &models.WatchlistItem{}, &models.UserWatchlist{}, &models.StockDailySnapshot{})
+		if err := config.MigrateDB(); err != nil {
+			log.Printf("Warning: Migration failed: %v", err)
+		}
+		if err := config.SeedDefaultUser(); err != nil {
+			log.Printf("Warning: Seed default user failed: %v", err)
+		}
 	}
 
 	r := gin.Default()
@@ -71,17 +78,26 @@ func main() {
 			return
 		}
 
+		// Extract user_id and set in context
+		if claims, ok := token.Claims.(jwt.MapClaims); ok {
+			if userID, ok := claims["user_id"].(float64); ok {
+				c.Set("userID", fmt.Sprintf("%d", int(userID)))
+			}
+		}
+
 		c.Next()
 	}
 
 	r.GET("/health", handlers.HealthCheck)
 	r.POST("/api/login", handlers.Login)
+	r.POST("/api/logout", handlers.Logout)
 	r.POST("/api/stocks/backup", handlers.ManualBackup) // Manual backup trigger
 	r.POST("/api/stocks/backup/:code", handlers.BackupSingleStock) // Backup single stock
 
 	protected := r.Group("/api")
 	protected.Use(authMiddleware)
 	{
+		protected.GET("/api/user", handlers.GetCurrentUser)
 		protected.GET("/stocks", handlers.GetStocks)
 		protected.POST("/stocks", handlers.CreateStock)
 		protected.DELETE("/stocks/:code", handlers.DeleteStock)

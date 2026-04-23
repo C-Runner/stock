@@ -1,22 +1,22 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, h, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import {
-  NButton, NDataTable, NSpace, NIcon,
+  NButton, NIcon,
   NSwitch, NSpin, NEmpty, NButtonGroup
 } from 'naive-ui'
-import type { DataTableColumns } from 'naive-ui'
 import { watchlistApi, stockApi, backupApi, type WatchlistItem, type StockQuote } from '../api'
-import { IconSearch, IconRefresh, IconBackup } from '../components/icons'
-import { formatVolume } from '../utils/format'
+import { IconRefresh, IconDelete, IconHome, IconPlus, IconBackup } from '../components/icons'
 import StockSearch from '../components/StockSearch.vue'
 
+const router = useRouter()
 
 const watchlist = ref<WatchlistItem[]>([])
 const quotes = ref<Map<string, StockQuote>>(new Map())
 const loading = ref(false)
 const refreshing = ref(false)
 const backingUp = ref(false)
-const backupStatus = ref<string>('')
+const backupStatus = ref('')
 
 const autoRefresh = ref(true)
 const refreshInterval = ref(30)
@@ -32,77 +32,12 @@ interface WatchlistRow {
   quote: StockQuote | null
 }
 
-const columns: DataTableColumns<WatchlistRow> = [
-  {
-    title: 'Stock',
-    key: 'stock',
-    width: 90,
-    render: (row) => h('div', { class: 'stock-cell' }, [
-      h('div', {
-        class: 'stock-name',
-        onClick: (e: MouseEvent) => {
-          e.stopPropagation()
-          window.location.href = `/analysis/${row.code}`
-        }
-      }, row.name),
-      h('div', { class: 'stock-code' }, row.code)
-    ])
-  },
-  {
-    title: 'Price',
-    key: 'price',
-    width: 90,
-    render: (row) => row.quote ? `¥${row.quote.current.toFixed(2)}` : '-'
-  },
-  {
-    title: 'Change',
-    key: 'change',
-    width: 90,
-    render: (row) => {
-      if (!row.quote) return '-'
-      const rate = row.quote.prevClose > 0
-        ? ((row.quote.current - row.quote.prevClose) / row.quote.prevClose) * 100
-        : 0
-      return h('span', { class: rate >= 0 ? 'change-up' : 'change-down' },
-        `${rate >= 0 ? '+' : ''}${rate.toFixed(2)}%`
-      )
-    }
-  },
-  {
-    title: 'Volume',
-    key: 'volume',
-    width: 90,
-    render: (row) => row.quote ? formatVolume(row.quote.volume) : '-'
-  },
-  {
-    title: 'Action',
-    key: 'actions',
-    width: 80,
-    render: (row) => h(NButton, {
-      size: 'small',
-      type: 'error',
-      quaternary: true,
-      onClick: (e: Event) => { e.stopPropagation(); handleRemove(row.code) }
-    }, () => 'Remove')
-  }
-]
-
 const tableData = computed<WatchlistRow[]>(() =>
   watchlist.value.map(item => ({
     ...item,
     quote: quotes.value.get(item.code) || null
   }))
 )
-
-const rowProps = (row: WatchlistRow) => {
-  const goToAnalysis = () => {
-    window.location.href = `/analysis/${row.code}`
-  }
-  return {
-    style: 'cursor: pointer',
-    onClick: goToAnalysis
-  }
-}
 
 const fetchWatchlist = async () => {
   loading.value = true
@@ -169,13 +104,15 @@ const handleBackup = async () => {
   try {
     const result = await backupApi.triggerBackup()
     backupStatus.value = result.message
-    // Poll for completion or just show started status
     setTimeout(() => {
       backupStatus.value = ''
-    }, 3000)
+    }, 5000)
   } catch (error) {
     console.error(error)
     backupStatus.value = 'Backup failed'
+    setTimeout(() => {
+      backupStatus.value = ''
+    }, 3000)
   } finally {
     backingUp.value = false
   }
@@ -231,25 +168,18 @@ onUnmounted(() => stopAutoRefresh())
           <p class="subtitle">Track your favorite stocks</p>
         </div>
       </div>
-      <n-space>
-        <n-button type="primary" @click="handleBackup" :loading="backingUp" class="backup-btn">
+      <div class="header-right">
+        <n-button @click="handleBackup" :loading="backingUp" class="backup-btn" style="background: rgba(255, 255, 255, 0.05) !important;">
           <template #icon>
-            <n-icon><IconBackup /></n-icon>
+            <n-icon style="background: transparent !important;"><IconBackup /></n-icon>
           </template>
-          Backup
-        </n-button>
-        <n-button type="primary" @click="showSearch = true" class="add-btn">
-          <template #icon>
-            <n-icon><IconSearch /></n-icon>
-          </template>
-          Add Stock
         </n-button>
         <n-button @click="fetchQuotes" :loading="refreshing" class="refresh-btn" style="background: rgba(255, 255, 255, 0.05) !important;">
           <template #icon>
             <n-icon style="background: transparent !important;"><IconRefresh /></n-icon>
           </template>
         </n-button>
-      </n-space>
+      </div>
     </div>
 
     <div class="refresh-card">
@@ -281,10 +211,8 @@ onUnmounted(() => stopAutoRefresh())
           </n-button-group>
         </div>
       </div>
-      <div class="refresh-right">
-        <div class="backup-status" v-if="backupStatus">
-          {{ backupStatus }}
-        </div>
+      <div class="backup-status" v-if="backupStatus">
+        {{ backupStatus }}
       </div>
     </div>
 
@@ -292,21 +220,46 @@ onUnmounted(() => stopAutoRefresh())
       <div class="table-header">
         <span>Watchlist</span>
         <span class="last-refresh" v-if="lastRefresh">
-          Last: {{ lastRefresh.toLocaleTimeString() }}
+          {{ lastRefresh.toLocaleTimeString() }}
         </span>
       </div>
       <div class="table-content">
         <n-spin :show="loading">
           <n-empty v-if="!loading && tableData.length === 0" description="No stocks in watchlist" />
-          <n-data-table
-            v-else
-            :columns="columns"
-            :data="tableData"
-            :pagination="false"
-            :bordered="false"
-            striped
-            :row-props="rowProps"
-          />
+          <div v-else class="watchlist-cards">
+            <div
+              v-for="row in tableData"
+              :key="row.code"
+              class="watchlist-card"
+              @click="router.push({ path: `/analysis/${row.code}`, query: { from: '/watchlist' } })"
+            >
+              <div class="card-left">
+                <div class="card-name">{{ row.name }}</div>
+                <div class="card-code">{{ row.code }}</div>
+              </div>
+              <div class="card-right" v-if="row.quote">
+                <div class="card-price">¥{{ row.quote.current.toFixed(2) }}</div>
+                <div class="card-change" :class="row.quote.current >= row.quote.prevClose ? 'up' : 'down'">
+                  {{ row.quote.current >= row.quote.prevClose ? '+' : '' }}{{ (((row.quote.current - row.quote.prevClose) / row.quote.prevClose) * 100).toFixed(2) }}%
+                </div>
+              </div>
+              <div class="card-right" v-else>
+                <div class="card-price">-</div>
+                <div class="card-change">-</div>
+              </div>
+              <n-button
+                size="small"
+                type="error"
+                quaternary
+                @click.stop="handleRemove(row.code)"
+                class="card-delete-btn"
+              >
+                <template #icon>
+                  <n-icon><IconDelete /></n-icon>
+                </template>
+              </n-button>
+            </div>
+          </div>
         </n-spin>
       </div>
     </div>
@@ -315,6 +268,21 @@ onUnmounted(() => stopAutoRefresh())
       v-model:show="showSearch"
       @select="handleAddToWatchlist"
     />
+
+    <div class="bottom-tabs">
+      <div class="tab-item" @click="router.push('/')">
+        <div class="tab-icon">
+          <n-icon size="22"><IconHome /></n-icon>
+        </div>
+        <span class="tab-label">Portfolio</span>
+      </div>
+      <div class="tab-item primary" @click="showSearch = true">
+        <div class="tab-icon">
+          <n-icon size="24"><IconPlus /></n-icon>
+        </div>
+        <span class="tab-label">Add</span>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -324,10 +292,11 @@ onUnmounted(() => stopAutoRefresh())
   max-width: 1200px;
   margin: 0 auto;
   min-height: calc(100vh - 60px);
-  padding: 16px 24px;
+  padding: 16px;
+  padding-bottom: calc(80px + env(safe-area-inset-bottom));
   box-sizing: border-box;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .background {
@@ -447,17 +416,6 @@ onUnmounted(() => stopAutoRefresh())
   border-radius: 6px;
 }
 
-.add-btn {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
-  border: none !important;
-  font-weight: 600;
-}
-
-.add-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
-}
-
 .refresh-btn {
   background: rgba(255, 255, 255, 0.05) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
@@ -495,11 +453,6 @@ onUnmounted(() => stopAutoRefresh())
   display: flex;
   align-items: center;
   gap: 20px;
-}
-
-.refresh-right {
-  display: flex;
-  align-items: center;
 }
 
 .refresh-toggle {
@@ -570,6 +523,7 @@ onUnmounted(() => stopAutoRefresh())
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 2px solid rgba(99, 102, 241, 0.3);
   backdrop-filter: blur(20px);
   position: relative;
   overflow: hidden;
@@ -592,61 +546,13 @@ onUnmounted(() => stopAutoRefresh())
 
 .table-content {
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: calc(100vh - 350px - 70px - env(safe-area-inset-bottom));
   background: transparent !important;
 }
 
-.table-card :deep(.n-data-table) {
-  font-size: 14px;
-  background: transparent !important;
-}
-
-.table-card :deep(.n-data-table-wrapper) {
-  background: transparent !important;
-}
-
-.table-card :deep(.n-data-table-th) {
-  background: transparent !important;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.6) !important;
-  padding: 6px 6px !important;
-}
-
-.table-card :deep(.n-data-table-td) {
-  background: transparent !important;
-  color: #fff;
-  padding: 6px 6px !important;
-}
-
-.table-card :deep(.n-data-table-tr) {
-  background: transparent !important;
-}
-
-.table-card :deep(.n-base-table) {
-  background: transparent !important;
-}
-
-.table-card :deep(.n-base-table-tbody) {
-  background: transparent !important;
-}
-
-.table-card :deep(.n-base-table-tr) {
-  background: transparent !important;
-}
-
-.table-card :deep(.n-base-td) {
-  background: transparent !important;
-}
-
-.table-card :deep(.n-data-table-td__cell) {
-  white-space: normal !important;
-}
-
-.table-card :deep(.n-data-table-tr:hover .n-data-table-td) {
-  background: rgba(99, 102, 241, 0.08) !important;
-}
-
-.table-card :deep(.n-data-table-tr) {
-  cursor: pointer;
+.table-content::-webkit-scrollbar {
+  display: none;
 }
 
 .change-up {
@@ -657,62 +563,7 @@ onUnmounted(() => stopAutoRefresh())
   color: #38ef7d;
 }
 
-.code-link {
-  color: #6366f1;
-  cursor: pointer;
-  font-weight: 500;
-  transition: color 0.2s;
-}
-
-.code-link:hover {
-  color: #818cf8;
-  text-decoration: underline;
-}
-
-.stock-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  line-height: 1.3;
-}
-
-.stock-name {
-  font-size: 14px;
-  color: #fff;
-  cursor: pointer;
-}
-
-.stock-name:hover {
-  color: #6366f1;
-}
-
-.stock-code {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.4);
-}
-
 @media (max-width: 768px) {
-  .table-card :deep(.n-data-table) {
-    font-size: 12px;
-  }
-
-  .table-card :deep(.n-data-table-th),
-  .table-card :deep(.n-data-table-td) {
-    padding: 6px 4px;
-  }
-
-  .table-card :deep(.n-data-table-wrapper) {
-    background: transparent !important;
-  }
-
-  .table-card :deep(.n-data-table-tr) {
-    background: transparent !important;
-  }
-
-  .table-card :deep(.n-data-table-td) {
-    background: transparent !important;
-  }
-
   .watchlist {
     padding: 12px 12px;
   }
@@ -750,5 +601,175 @@ onUnmounted(() => stopAutoRefresh())
 
 .table-card :deep(.n-icon) {
   background: transparent !important;
+}
+
+.watchlist-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.watchlist-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.watchlist-card:active {
+  background: rgba(99, 102, 241, 0.1);
+  transform: scale(0.98);
+}
+
+.card-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-code {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 2px;
+}
+
+.card-right {
+  text-align: right;
+  min-width: 80px;
+}
+
+.card-price {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.card-change {
+  font-size: 12px;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.card-change.up {
+  color: #ff6b6b;
+}
+
+.card-change.down {
+  color: #38ef7d;
+}
+
+.card-delete-btn {
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.card-delete-btn:hover {
+  opacity: 1;
+}
+
+.bottom-tabs {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 70px;
+  background: rgba(20, 19, 60, 0.4);
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  padding: 0 24px;
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 100;
+  touch-action: none;
+}
+
+.tab-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 10px 20px;
+  border-radius: 16px;
+  transition: all 0.2s ease;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.tab-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.tab-item.primary {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+}
+
+.tab-item.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.5);
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+}
+
+.tab-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tab-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .watchlist {
+    padding: 12px;
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+
+  .watchlist-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 12px;
+  }
+
+  .header-left {
+    flex-direction: column;
+  }
+
+  .refresh-card {
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .refresh-left {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
 }
 </style>

@@ -59,7 +59,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { api } from '../api'
+import { authApi } from '../api'
 
 const router = useRouter()
 
@@ -83,9 +83,10 @@ const handleLogin = async () => {
   loading.value = true
 
   try {
-    const response = await api.post<{ token: string; expiresAt: number }>('/api/login', form.value)
+    const response = await authApi.login(form.value.username, form.value.password)
     localStorage.setItem('token', response.token)
     localStorage.setItem('tokenExpiry', String(response.expiresAt))
+    localStorage.setItem('user', JSON.stringify(response.user))
     router.push('/')
   } catch {
     errorMessage.value = 'Invalid username or password'

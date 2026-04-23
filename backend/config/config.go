@@ -9,6 +9,9 @@ import (
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"golang.org/x/crypto/bcrypt"
+
+	"backend/models"
 )
 
 type Config struct {
@@ -120,4 +123,86 @@ func DisconnectPostgres() {
 			log.Println("Disconnected from PostgreSQL")
 		}
 	}
+}
+
+// MigrateDB runs database migrations for user_id fields
+func MigrateDB() error {
+	// === Stocks table (user_id as part of composite PK) ===
+	if err := DB.Exec("ALTER TABLE stocks ADD COLUMN IF NOT EXISTS user_id VARCHAR(255)").Error; err != nil {
+		return fmt.Errorf("failed to add user_id to stocks: %w", err)
+	}
+
+	if err := DB.Exec("ALTER TABLE stocks DROP CONSTRAINT IF EXISTS stocks_pkey").Error; err != nil {
+		log.Printf("Note: stocks_pkey may not exist or already dropped: %v", err)
+	}
+
+	if err := DB.Exec("ALTER TABLE stocks ADD PRIMARY KEY (code, user_id)").Error; err != nil {
+		log.Printf("Note: stocks composite pk may already exist: %v", err)
+	}
+
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_stocks_user_id ON stocks(user_id)").Error; err != nil {
+		return fmt.Errorf("failed to create idx_stocks_user_id: %w", err)
+	}
+
+	// === Watchlist table (no user_id, keep as backup data table) ===
+	// Ensure watchlist table has proper primary key (code only)
+	if err := DB.Exec("ALTER TABLE watchlist DROP CONSTRAINT IF EXISTS watchlist_pkey").Error; err != nil {
+		log.Printf("Note: watchlist_pkey may not exist: %v", err)
+	}
+
+	if err := DB.Exec("ALTER TABLE watchlist ADD PRIMARY KEY (code)").Error; err != nil {
+		log.Printf("Note: watchlist pk may already exist: %v", err)
+	}
+
+	// === UserWatchlist table (new user-watchlist association table) ===
+	// Create user_watchlist table
+	if err := DB.Exec(`
+		CREATE TABLE IF NOT EXISTS user_watchlist (
+			user_id VARCHAR(255) NOT NULL,
+			code VARCHAR(20) NOT NULL,
+			added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (user_id, code)
+		)
+	`).Error; err != nil {
+		return fmt.Errorf("failed to create user_watchlist table: %w", err)
+	}
+
+	// Create index on user_id
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_user_watchlist_user_id ON user_watchlist(user_id)").Error; err != nil {
+		return fmt.Errorf("failed to create idx_user_watchlist_user_id: %w", err)
+	}
+
+	log.Println("Database migration completed successfully")
+	return nil
+}
+
+// SeedDefaultUser creates default admin user if not exists
+func SeedDefaultUser() error {
+	var count int64
+	if err := DB.Model(&models.User{}).Count(&count).Error; err != nil {
+		return fmt.Errorf("failed to count users: %w", err)
+	}
+
+	if count > 0 {
+		log.Println("Users already exist, skipping seed")
+		return nil
+	}
+
+	cfg := LoadConfig()
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(cfg.LoginPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	adminUser := models.User{
+		Username: cfg.LoginUsername,
+		Password: string(hashedPassword),
+	}
+
+	if err := DB.Create(&adminUser).Error; err != nil {
+		return fmt.Errorf("failed to create default user: %w", err)
+	}
+
+	log.Printf("Default user created: %s", cfg.LoginUsername)
+	return nil
 }

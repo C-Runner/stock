@@ -9,6 +9,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// getUserID extracts userID from JWT context
+func getUserID(c *gin.Context) string {
+	if userID, exists := c.Get("userID"); exists {
+		return userID.(string)
+	}
+	return ""
+}
+
 func HealthCheck(c *gin.Context) {
 	response := models.HealthResponse{
 		Status:    "ok",
@@ -33,8 +41,9 @@ func NotFound(c *gin.Context) {
 }
 
 func GetStocks(c *gin.Context) {
+	userID := getUserID(c)
 	var stocks []models.Stock
-	if err := config.DB.Find(&stocks).Error; err != nil {
+	if err := config.DB.Where("user_id = ?", userID).Find(&stocks).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -47,6 +56,7 @@ func GetStocks(c *gin.Context) {
 }
 
 func CreateStock(c *gin.Context) {
+	userID := getUserID(c)
 	var req models.StockRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -54,13 +64,14 @@ func CreateStock(c *gin.Context) {
 	}
 
 	var existing models.Stock
-	if err := config.DB.Where("code = ?", req.Code).First(&existing).Error; err == nil {
+	if err := config.DB.Where("code = ? AND user_id = ?", req.Code, userID).First(&existing).Error; err == nil {
 		c.JSON(http.StatusConflict, gin.H{"error": "Stock with this code already exists"})
 		return
 	}
 
 	stock := models.Stock{
 		Code:         req.Code,
+		UserID:       userID,
 		Name:         req.Name,
 		CurrentPrice: req.CurrentPrice,
 		Quantity:     req.Quantity,
@@ -78,13 +89,14 @@ func CreateStock(c *gin.Context) {
 }
 
 func DeleteStock(c *gin.Context) {
+	userID := getUserID(c)
 	code := c.Param("code")
 	if code == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Stock code is required"})
 		return
 	}
 
-	result := config.DB.Where("code = ?", code).Delete(&models.Stock{})
+	result := config.DB.Where("code = ? AND user_id = ?", code, userID).Delete(&models.Stock{})
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
 		return

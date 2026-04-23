@@ -6,27 +6,7 @@ export interface HealthResponse {
   service: string
 }
 
-// Watchlist types
-export interface WatchlistItem {
-  code: string
-  name: string
-  addedAt: string
-}
-
-export interface WatchlistQuote {
-  code: string
-  name: string
-  addedAt: string
-  current: number
-  open: number
-  high: number
-  low: number
-  change: number
-  changeRate: number
-  volume: number
-  updateTime: string
-}
-
+// Stock types
 export interface Stock {
   code: string
   name: string
@@ -35,6 +15,12 @@ export interface Stock {
   buyPrice: number
   createdAt: string
   updatedAt: string
+}
+
+export interface WatchlistItem {
+  code: string
+  name: string
+  addedAt: string
 }
 
 export interface StockRequest {
@@ -71,6 +57,12 @@ export interface StockAnalysis {
   change: number
   changeAmount: number
 }
+
+export interface NoPositionResponse {
+  hasPosition: false
+}
+
+export type StockAnalysisResponse = StockAnalysis | NoPositionResponse
 
 export interface MAData {
   period: number
@@ -258,7 +250,13 @@ export const api = {
 }
 
 export const healthApi = {
-  check: () => api.get<HealthResponse>('/health')
+  check: () => api.get<{ status: string; timestamp: string; service: string }>('/health')
+}
+
+export const authApi = {
+  login: (username: string, password: string) =>
+    api.post<{ token: string; expiresAt: number; user: { id: number; username: string; createdAt: string } }>('/api/login', { username, password }),
+  logout: () => api.post<{ message: string }>('/api/logout', {})
 }
 
 export const stockApi = {
@@ -266,7 +264,7 @@ export const stockApi = {
   createStock: (data: StockRequest) => api.post<Stock>('/api/stocks', data),
   deleteStock: (code: string) => api.delete<{ message: string }>(`/api/stocks/${code}`),
   getQuote: (code: string) => api.get<StockQuote>(`/api/stocks/quote/${code}`),
-  getAnalysis: (code: string) => api.get<StockAnalysis>(`/api/stocks/analysis/${code}`),
+  getAnalysis: (code: string) => api.get<StockAnalysisResponse>(`/api/stocks/analysis/${code}`),
   getTechnical: (code: string) => api.get<TechnicalAnalysis>(`/api/stocks/technical/${code}`),
   searchStocks: (q: string) => api.get<Stock[]>(`/api/stocks/search?q=${encodeURIComponent(q)}`)
 }

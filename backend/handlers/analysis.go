@@ -32,14 +32,15 @@ func GetStockQuote(c *gin.Context) {
 // GetStockAnalysis fetches stock analysis with position data
 func GetStockAnalysis(c *gin.Context) {
 	code := c.Param("code")
+	userID := getUserID(c)
 	if code == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Stock code is required"})
 		return
 	}
 
 	var stock models.Stock
-	if err := config.DB.Where("code = ?", code).First(&stock).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Stock not found in portfolio"})
+	if err := config.DB.Where("code = ? AND user_id = ?", code, userID).First(&stock).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"hasPosition": false})
 		return
 	}
 

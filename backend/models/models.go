@@ -11,6 +11,7 @@ type HealthResponse struct {
 
 type Stock struct {
 	Code         string    `json:"code" gorm:"primaryKey;column:code"`
+	UserID       string    `json:"userId" gorm:"primaryKey;column:user_id;index"`
 	Name         string    `json:"name" gorm:"column:name"`
 	CurrentPrice float64   `json:"currentPrice" gorm:"column:current_price"`
 	Quantity     int       `json:"quantity" gorm:"column:quantity"`
@@ -60,7 +61,7 @@ type StockAnalysis struct {
 	ChangeAmount float64 `json:"changeAmount"`
 }
 
-// WatchlistItem represents a stock in user's watchlist
+// WatchlistItem represents a stock in watchlist (backup table, no user_id)
 type WatchlistItem struct {
 	Code    string    `json:"code" gorm:"primaryKey;column:code"`
 	Name    string    `json:"name" gorm:"column:name"`
@@ -71,19 +72,15 @@ func (WatchlistItem) TableName() string {
 	return "watchlist"
 }
 
-// WatchlistQuote combines watchlist item with real-time quote
-type WatchlistQuote struct {
-	Code       string  `json:"code"`
-	Name       string  `json:"name"`
-	AddedAt    string  `json:"addedAt"`
-	Current    float64 `json:"current"`
-	Open       float64 `json:"open"`
-	High       float64 `json:"high"`
-	Low        float64 `json:"low"`
-	Change     float64 `json:"change"`
-	ChangeRate float64 `json:"changeRate"`
-	Volume     int64   `json:"volume"`
-	UpdateTime string  `json:"updateTime"`
+// UserWatchlist associates users with their watchlist stocks (composite PK: user_id, code)
+type UserWatchlist struct {
+	UserID  string `json:"userId" gorm:"column:user_id;primaryKey"`
+	Code    string `json:"code" gorm:"column:code;primaryKey"`
+	AddedAt time.Time `json:"addedAt" gorm:"column:added_at"`
+}
+
+func (UserWatchlist) TableName() string {
+	return "user_watchlist"
 }
 
 // StockDailySnapshot stores daily stock data for historical analysis and backup
@@ -121,4 +118,17 @@ type StockDailySnapshot struct {
 
 func (StockDailySnapshot) TableName() string {
 	return "stock_daily_snapshots"
+}
+
+// User represents a user account
+type User struct {
+	ID        uint      `json:"id" gorm:"primaryKey;autoIncrement"`
+	Username  string    `json:"username" gorm:"uniqueIndex;column:username;size:100"`
+	Password  string    `json:"-" gorm:"column:password;size:255"`
+	CreatedAt time.Time `json:"createdAt" gorm:"column:created_at"`
+	UpdatedAt time.Time `json:"updatedAt" gorm:"column:updated_at"`
+}
+
+func (User) TableName() string {
+	return "users"
 }
