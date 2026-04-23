@@ -8,12 +8,6 @@
 
     <div class="home-header">
       <div class="header-left">
-        <div class="logo">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 3v18h18"/>
-            <path d="M18 9l-5 5-4-4-3 3"/>
-          </svg>
-        </div>
         <div class="header-text">
           <h1>Stock Portfolio</h1>
           <p class="subtitle">Manage your stock holdings</p>
@@ -91,37 +85,28 @@
         <n-empty description="No stocks yet, click 'Add Stock' to add one" />
       </div>
       <div class="table-container" v-else>
-        <div class="table-header-row">
-          <div class="header-stock-cell">Stock</div>
-          <div class="header-scroll-part">
-            <div class="header-price-cell">Price</div>
-            <div class="header-profit-cell">P/L</div>
-            <div class="header-cell-item">Qty</div>
-            <div class="header-cell-item">Value</div>
-            <div class="header-action-cell"></div>
-          </div>
-        </div>
-        <div class="table-body-wrapper">
-          <div class="table-stock-body" ref="stockBodyRef" @scroll="handleStockScroll">
-            <div
-              v-for="stock in stocks"
-              :key="stock.code + '-stock'"
-              class="table-stock-row"
-              @click="goToAnalysis(stock.code)"
-            >
-              <div class="stock-cell">
-                <div class="stock-name">{{ stock.name }}</div>
-                <div class="stock-code">{{ stock.code }}</div>
-              </div>
+        <div class="table-scroll-wrapper">
+          <div class="table-header-row">
+            <div class="header-stock-cell">Stock</div>
+            <div class="header-scroll-part">
+              <div class="header-price-cell">Price</div>
+              <div class="header-profit-cell">P/L</div>
+              <div class="header-cell-item">Qty</div>
+              <div class="header-cell-item">Value</div>
+              <div class="header-action-cell"></div>
             </div>
           </div>
-          <div class="table-scroll-body" ref="scrollBodyRef" @scroll="handleScrollBodyScroll">
-            <div
-              v-for="stock in stocks"
-              :key="stock.code"
-              class="table-scroll-row"
-              @click="goToAnalysis(stock.code)"
-            >
+          <div
+            v-for="stock in stocks"
+            :key="stock.code"
+            class="table-row"
+            @click="goToAnalysis(stock.code)"
+          >
+            <div class="stock-cell">
+              <div class="stock-name">{{ stock.name }}</div>
+              <div class="stock-code">{{ stock.code }}</div>
+            </div>
+            <div class="table-scroll-part">
               <div class="price-cell">
                 <div class="price-current">¥{{ stock.currentPrice.toFixed(2) }}</div>
                 <div class="price-cost">¥{{ stock.buyPrice.toFixed(2) }}</div>
@@ -287,20 +272,6 @@ const loading = ref(false)
 const showAddModal = ref(false)
 const submitting = ref(false)
 const lookingUp = ref(false)
-const stockBodyRef = ref<HTMLElement | null>(null)
-const scrollBodyRef = ref<HTMLElement | null>(null)
-
-const handleStockScroll = (e: Event) => {
-  if (scrollBodyRef.value) {
-    scrollBodyRef.value.scrollTop = (e.target as HTMLElement).scrollTop
-  }
-}
-
-const handleScrollBodyScroll = (e: Event) => {
-  if (stockBodyRef.value) {
-    stockBodyRef.value.scrollTop = (e.target as HTMLElement).scrollTop
-  }
-}
 
 
 const stockForm = ref<StockRequest>({
@@ -427,18 +398,17 @@ const handleLogout = async () => {
   position: relative;
   overflow: hidden;
   padding: 16px;
-  padding-bottom: calc(70px + env(safe-area-inset-bottom));
+  padding-bottom: calc(70px + 6px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
-  touch-action: none;
-  user-select: none;
 }
 
 .background {
-  position: fixed;
+  position: absolute;
   inset: 0;
   overflow: hidden;
   pointer-events: none;
+  z-index: -1;
 }
 
 .gradient-orb {
@@ -675,7 +645,6 @@ const handleLogout = async () => {
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
-  touch-action: none;
 }
 
 .table-header {
@@ -786,26 +755,6 @@ const handleLogout = async () => {
   color: #38ef7d;
 }
 
-.stock-cell {
-  width: 100%;
-  min-width: 76px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 4px;
-  line-height: 1.3;
-}
-
-.price-cell {
-  width: 90px;
-  min-width: 90px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 4px;
-  line-height: 1.3;
-}
-
 .price-current {
   font-size: 14px;
   color: #fff;
@@ -814,16 +763,6 @@ const handleLogout = async () => {
 .price-cost {
   font-size: 14px;
   color: #fff;
-}
-
-.profit-cell {
-  width: 90px;
-  min-width: 90px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 4px;
-  line-height: 1.3;
 }
 
 .profit-amount {
@@ -906,7 +845,7 @@ const handleLogout = async () => {
 @media (max-width: 480px) {
   .home {
     padding: 12px 8px;
-    padding-bottom: calc(70px + env(safe-area-inset-bottom));
+    padding-bottom: calc(70px + 6px + env(safe-area-inset-bottom));
   }
 
   .home-header {
@@ -1215,105 +1154,35 @@ const handleLogout = async () => {
 }
 
 .table-container {
-  display: flex;
-  width: 100%;
-  overflow: hidden;
-  margin: 0 -1px;
-  padding: 0 1px;
-  box-sizing: border-box;
   flex: 1;
   min-height: 0;
+  display: flex;
   flex-direction: column;
-  touch-action: none;
+  width: 100%;
+  overflow: hidden;
+}
+
+.table-scroll-wrapper {
+  flex: 1;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  overscroll-behavior: contain;
+}
+
+.table-scroll-wrapper::-webkit-scrollbar {
+  display: none;
 }
 
 .table-header-row {
   display: flex;
   height: 40px;
-  flex-shrink: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  min-width: max-content;
-}
-
-.header-scroll-part {
-  display: flex;
-  flex: 1;
-  min-width: max-content;
-}
-
-.table-body-wrapper {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  flex-basis: 0;
-  height: 0;
-}
-
-.table-stock-body {
-  flex-shrink: 0;
-  width: 100px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  background: transparent;
-  touch-action: pan-y;
-}
-
-.table-stock-body::-webkit-scrollbar {
-  display: none;
-}
-
-.table-scroll-body {
-  flex: 1;
-  overflow-x: auto;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  min-width: 0;
-  touch-action: pan-x pan-y;
-}
-
-.table-scroll-body::-webkit-scrollbar {
-  display: none;
-}
-
-.table-stock-row {
-  height: 60px;
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  cursor: pointer;
-  transition: background 0.2s ease;
-  touch-action: none;
-}
-
-.table-stock-row:hover {
-  background: rgba(99, 102, 241, 0.08);
-}
-
-.table-scroll-row {
-  display: flex;
-  height: 60px;
-  min-width: max-content;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  cursor: pointer;
-  transition: background 0.2s ease;
-  touch-action: none;
-}
-
-.table-scroll-row:hover {
-  background: rgba(99, 102, 241, 0.08);
-}
-
-.stock-cell {
-  width: 100%;
-  min-width: 76px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 0 12px;
-  gap: 4px;
-  line-height: 1.3;
+  background: rgba(10, 10, 15, 0.95);
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .header-stock-cell {
@@ -1326,28 +1195,19 @@ const handleLogout = async () => {
   color: rgba(255, 255, 255, 0.6);
   padding: 0 12px;
   box-sizing: border-box;
+  background: rgba(10, 10, 15, 1);
+  position: sticky;
+  left: 0;
+  z-index: 11;
 }
 
-.header-price-cell {
-  width: 90px;
-  min-width: 90px;
+.header-scroll-part {
   display: flex;
-  align-items: center;
-  font-weight: 600;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.6);
+  flex: 1;
 }
 
-.header-profit-cell {
-  width: 90px;
-  min-width: 90px;
-  display: flex;
-  align-items: center;
-  font-weight: 600;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.6);
-}
-
+.header-price-cell,
+.header-profit-cell,
 .header-cell-item {
   width: 90px;
   min-width: 90px;
@@ -1359,11 +1219,66 @@ const handleLogout = async () => {
 }
 
 .header-action-cell {
-  width: 40px;
-  min-width: 40px;
+  width: 50px;
+  min-width: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.table-row {
+  display: flex;
+  height: 60px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: background 0.2s ease;
+  width: max-content;
+  min-width: 100%;
+}
+
+.table-row:hover {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.stock-cell {
+  width: 100px;
+  min-width: 100px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 12px;
+  gap: 4px;
+  line-height: 1.3;
+  box-sizing: border-box;
+  background: rgba(10, 10, 15, 1);
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+.table-scroll-part {
+  display: flex;
+  flex: 1;
+}
+
+.price-cell {
+  width: 90px;
+  min-width: 90px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  line-height: 1.3;
+}
+
+.profit-cell {
+  width: 90px;
+  min-width: 90px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  line-height: 1.3;
 }
 
 .cell-item {
@@ -1373,15 +1288,18 @@ const handleLogout = async () => {
   align-items: center;
   font-size: 14px;
   color: #fff;
-  height: 100%;
 }
 
 .action-cell {
-  width: 40px;
-  min-width: 40px;
+  width: 50px;
+  min-width: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.table-row:hover {
+  background: rgba(99, 102, 241, 0.08);
 }
 
 .delete-btn {

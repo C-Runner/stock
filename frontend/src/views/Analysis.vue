@@ -5,15 +5,9 @@
       <div class="gradient-orb orb-2"></div>
     </div>
 
-    <n-space vertical :size="12" class="content">
+    <n-space vertical :size="12" class="content" :style="{ width: '100%' }">
       <div class="stock-header">
         <div class="stock-info" v-if="quote">
-          <div class="logo">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 3v18h18"/>
-              <path d="M18 9l-5 5-4-4-3 3"/>
-            </svg>
-          </div>
           <div class="stock-text">
             <h2 class="stock-name">{{ quote.name }}</h2>
             <span class="stock-code">{{ stockCode }}</span>
@@ -27,7 +21,7 @@
         </div>
       </div>
 
-      <n-card class="analysis-card" :bordered="false" shadow>
+      <n-card class="analysis-card" :bordered="false" :content-style="{ padding: '16px' }" :header-style="{ padding: '16px 20px', borderBottom: 'none' }" :shadow="false">
         <template #header>
           <div class="card-header">
             <n-icon size="20"><IconWallet /></n-icon>
@@ -90,7 +84,7 @@
         </template>
       </n-card>
 
-      <n-card class="analysis-card" :bordered="false" shadow>
+      <n-card class="analysis-card" :bordered="false" :content-style="{ padding: '16px' }" :header-style="{ padding: '16px 20px', borderBottom: 'none' }" :shadow="false">
         <template #header>
           <div class="card-header">
             <n-icon size="20"><IconTrend /></n-icon>
@@ -188,7 +182,7 @@
         </template>
       </n-card>
 
-      <n-card class="analysis-card" :bordered="false" shadow>
+      <n-card class="analysis-card" :bordered="false" :content-style="{ padding: '16px' }" :header-style="{ padding: '16px 20px', borderBottom: 'none' }" :shadow="false">
         <template #header>
           <div class="card-header">
             <n-icon size="20"><IconClock /></n-icon>
@@ -225,7 +219,7 @@
         </template>
       </n-card>
 
-      <n-card class="analysis-card" :bordered="false" shadow>
+      <n-card class="analysis-card" :bordered="false" :content-style="{ padding: '16px' }" :header-style="{ padding: '16px 20px', borderBottom: 'none' }" :shadow="false">
         <template #header>
           <div class="card-header">
             <n-icon size="20"><IconChart /></n-icon>
@@ -349,7 +343,6 @@ onMounted(() => {
 .analysis {
   width: 100%;
   height: 100%;
-  max-width: 1200px;
   margin: 0 auto;
   box-sizing: border-box;
   position: absolute;
@@ -360,9 +353,10 @@ onMounted(() => {
   overflow-y: auto;
   overflow-x: hidden;
   padding: 16px;
-  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  padding-bottom: calc(70px + 6px + env(safe-area-inset-bottom));
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 .background {
@@ -405,10 +399,12 @@ onMounted(() => {
 .content {
   position: relative;
   align-items: stretch;
+  width: 100%;
 }
 
 .content > * {
   flex-shrink: 0;
+  margin-bottom: 0 !important;
 }
 
 .stock-header {
@@ -502,11 +498,26 @@ onMounted(() => {
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   backdrop-filter: blur(20px);
   transition: all 0.3s ease;
-  overflow: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  position: relative !important;
+  overflow: visible !important;
+  display: block !important;
 }
 
-.analysis-card:last-of-type {
-  margin-bottom: calc(80px + env(safe-area-inset-bottom)) !important;
+.analysis-card > * {
+  box-sizing: border-box;
+}
+
+.analysis-card :deep(.n-base-card) {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  border-radius: inherit !important;
+  overflow: visible !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 .analysis-card :deep(.n-card) {
@@ -514,13 +525,9 @@ onMounted(() => {
   border: none !important;
   box-shadow: none !important;
   border-radius: 20px !important;
-  overflow: hidden !important;
+  overflow: visible !important;
   padding: 0 !important;
   margin: 0 !important;
-  --n-padding-top: 0 !important;
-  --n-padding-bottom: 0 !important;
-  --n-padding-left: 0 !important;
-  --n-padding-right: 0 !important;
 }
 
 .analysis-card :deep(.n-card__content),
@@ -548,10 +555,11 @@ onMounted(() => {
 
 .analysis-card :deep(.n-card-header) {
   background: transparent !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border: none !important;
   padding: 16px 20px !important;
   margin: 0 !important;
   border-radius: inherit !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
 }
 
 .analysis-card :deep(.n-card-wrapper) {
@@ -561,14 +569,26 @@ onMounted(() => {
 }
 
 .analysis-card :deep(.n-base-card) {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
   border-radius: inherit !important;
-  overflow: hidden !important;
+  overflow: visible !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
-.analysis-card :deep(.n-card),
-.analysis-card :deep(.n-base-segment) {
-  border-radius: 20px !important;
-  overflow: hidden !important;
+.analysis-card :deep(.n-card__content) {
+  flex: 0 auto !important;
+  min-height: 0 !important;
+  box-sizing: border-box;
+  height: fit-content !important;
+  overflow: visible !important;
+}
+
+.analysis-card:last-of-type {
+  margin-bottom: 0 !important;
 }
 
 .analysis-card:hover {
@@ -849,7 +869,7 @@ onMounted(() => {
 @media (max-width: 480px) {
   .analysis {
     padding: 16px 12px;
-    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    padding-bottom: calc(70px + 6px + env(safe-area-inset-bottom));
   }
 
   .stock-header {

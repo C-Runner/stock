@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   NButton, NIcon,
@@ -99,6 +99,7 @@ const handleAddToWatchlist = async (code: string, name: string) => {
 }
 
 const handleBackup = async () => {
+  if (backingUp.value) return
   backingUp.value = true
   backupStatus.value = 'Starting backup...'
   try {
@@ -130,6 +131,13 @@ const stopAutoRefresh = () => {
   }
 }
 
+const formatVolume = (vol: number): string => {
+  if (vol >= 100000000) return (vol / 100000000).toFixed(2) + 'E'
+  if (vol >= 10000) return (vol / 10000).toFixed(2) + 'W'
+  if (vol >= 1000) return (vol / 1000).toFixed(2) + 'K'
+  return vol.toFixed(0)
+}
+
 watch(autoRefresh, (enabled) => {
   if (enabled) startAutoRefresh()
   else stopAutoRefresh()
@@ -158,20 +166,17 @@ onUnmounted(() => stopAutoRefresh())
 
     <div class="watchlist-header">
       <div class="header-left">
-        <div class="logo">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-          </svg>
-        </div>
         <div class="header-text">
           <h1>Watchlist</h1>
           <p class="subtitle">Track your favorite stocks</p>
         </div>
       </div>
       <div class="header-right">
-        <n-button @click="handleBackup" :loading="backingUp" class="backup-btn" style="background: rgba(255, 255, 255, 0.05) !important;">
+        <n-button @click="handleBackup" class="backup-btn" :class="{ 'is-backing-up': backingUp }">
           <template #icon>
-            <n-icon style="background: transparent !important;"><IconBackup /></n-icon>
+            <n-icon>
+              <IconBackup />
+            </n-icon>
           </template>
         </n-button>
         <n-button @click="fetchQuotes" :loading="refreshing" class="refresh-btn" style="background: rgba(255, 255, 255, 0.05) !important;">
@@ -237,27 +242,47 @@ onUnmounted(() => stopAutoRefresh())
                 <div class="card-name">{{ row.name }}</div>
                 <div class="card-code">{{ row.code }}</div>
               </div>
-              <div class="card-right" v-if="row.quote">
-                <div class="card-price">¥{{ row.quote.current.toFixed(2) }}</div>
-                <div class="card-change" :class="row.quote.current >= row.quote.prevClose ? 'up' : 'down'">
+              <div class="card-price-cell" v-if="row.quote">
+                <div class="price-current">¥{{ row.quote.current.toFixed(2) }}</div>
+              </div>
+              <div class="card-price-cell" v-else>
+                <div class="price-current">-</div>
+              </div>
+              <div class="card-change-cell" v-if="row.quote">
+                <div class="change-text" :class="row.quote.current >= row.quote.prevClose ? 'up' : 'down'">
                   {{ row.quote.current >= row.quote.prevClose ? '+' : '' }}{{ (((row.quote.current - row.quote.prevClose) / row.quote.prevClose) * 100).toFixed(2) }}%
                 </div>
               </div>
-              <div class="card-right" v-else>
-                <div class="card-price">-</div>
-                <div class="card-change">-</div>
+              <div class="card-change-cell" v-else>
+                <div class="change-text">-</div>
               </div>
-              <n-button
-                size="small"
-                type="error"
-                quaternary
-                @click.stop="handleRemove(row.code)"
-                class="card-delete-btn"
-              >
-                <template #icon>
-                  <n-icon><IconDelete /></n-icon>
-                </template>
-              </n-button>
+              <div class="card-hilow-cell" v-if="row.quote">
+                <div class="price-high">
+                  <span class="label">H</span>
+                  <span class="value up">¥{{ row.quote.high.toFixed(2) }}</span>
+                </div>
+                <div class="price-low">
+                  <span class="label">L</span>
+                  <span class="value down">¥{{ row.quote.low.toFixed(2) }}</span>
+                </div>
+              </div>
+              <div class="card-hilow-cell" v-else>
+                <div class="price-high">-</div>
+                <div class="price-low">-</div>
+              </div>
+              <div class="card-vol-cell" v-if="row.quote">
+                <div class="vol-value">{{ formatVolume(row.quote.volume) }}</div>
+              </div>
+              <div class="card-vol-cell" v-else>
+                <div class="vol-value">-</div>
+              </div>
+              <div class="card-action">
+                <n-button text @click.stop="handleRemove(row.code)" class="delete-btn">
+                  <template #icon>
+                    <n-icon><IconDelete /></n-icon>
+                  </template>
+                </n-button>
+              </div>
             </div>
           </div>
         </n-spin>
@@ -291,19 +316,20 @@ onUnmounted(() => stopAutoRefresh())
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  min-height: calc(100vh - 60px);
+  height: 100dvh;
   padding: 16px;
-  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  padding-bottom: calc(70px + 6px + env(safe-area-inset-bottom));
   box-sizing: border-box;
   position: relative;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .background {
-  position: fixed;
+  position: absolute;
   inset: 0;
   overflow: hidden;
   pointer-events: none;
+  z-index: -1;
 }
 
 .gradient-orb {
@@ -365,23 +391,6 @@ onUnmounted(() => stopAutoRefresh())
   gap: 12px;
 }
 
-.logo {
-  width: 36px;
-  height: 36px;
-  padding: 8px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.logo svg {
-  width: 100%;
-  height: 100%;
-  color: #fff;
-}
-
 .header-text h1 {
   margin: 0;
   font-size: 20px;
@@ -397,14 +406,27 @@ onUnmounted(() => stopAutoRefresh())
 }
 
 .backup-btn {
-  background: linear-gradient(135deg, #10b981, #059669) !important;
-  border: none !important;
-  font-weight: 600;
+  background: rgba(16, 185, 129, 0.15) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+  transition: all 0.2s ease;
 }
 
-.backup-btn:hover {
+.backup-btn:hover:not(.is-backing-up) {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  border-color: transparent !important;
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+}
+
+.backup-btn.is-backing-up {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  border-color: transparent !important;
+  transform: none;
+  box-shadow: none;
+}
+
+.backup-btn.is-backing-up .n-icon {
+  opacity: 1;
 }
 
 .backup-status {
@@ -526,46 +548,54 @@ onUnmounted(() => stopAutoRefresh())
   border-bottom: 2px solid rgba(99, 102, 241, 0.3);
   backdrop-filter: blur(20px);
   position: relative;
-  overflow: hidden;
-  padding: 16px;
+  padding: 0;
   box-sizing: border-box;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .table-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin: 12px 16px 8px;
   padding-bottom: 8px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   font-weight: 600;
   font-size: 16px;
   color: #fff;
-  gap: 12px;
+  flex: 0 0 auto;
 }
 
 .table-content {
-  overflow-x: auto;
-  overflow-y: auto;
-  max-height: calc(100vh - 350px - 70px - env(safe-area-inset-bottom));
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   background: transparent !important;
 }
 
-.table-content::-webkit-scrollbar {
+.watchlist-cards {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+.watchlist-cards::-webkit-scrollbar {
   display: none;
-}
-
-.change-up {
-  color: #ff6b6b;
-}
-
-.change-down {
-  color: #38ef7d;
 }
 
 @media (max-width: 768px) {
   .watchlist {
     padding: 12px 12px;
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
   }
 
   .watchlist-header {
@@ -583,6 +613,32 @@ onUnmounted(() => stopAutoRefresh())
   .refresh-controls {
     flex-wrap: wrap;
     justify-content: center;
+  }
+
+  .watchlist-card {
+    grid-template-columns: minmax(80px, 1fr) 70px 70px 80px 60px 32px;
+    height: 52px;
+    padding: 0 8px;
+  }
+
+  .card-name {
+    font-size: 13px;
+  }
+
+  .card-code {
+    font-size: 10px;
+  }
+
+  .price-current, .change-text {
+    font-size: 13px;
+  }
+
+  .price-high, .price-low {
+    font-size: 10px;
+  }
+
+  .vol-value {
+    font-size: 11px;
   }
 }
 
@@ -604,35 +660,45 @@ onUnmounted(() => stopAutoRefresh())
 }
 
 .watchlist-cards {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  overflow-x: hidden;
+}
+
+.watchlist-cards::-webkit-scrollbar {
+  display: none;
 }
 
 .watchlist-card {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) 80px 80px 90px 70px 32px;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
+  height: 60px;
+  padding: 0 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+  overflow: visible;
 }
 
-.watchlist-card:active {
-  background: rgba(99, 102, 241, 0.1);
-  transform: scale(0.98);
+.watchlist-card:hover {
+  background: rgba(99, 102, 241, 0.08);
 }
 
 .card-left {
-  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .card-name {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: #fff;
   white-space: nowrap;
@@ -640,44 +706,92 @@ onUnmounted(() => stopAutoRefresh())
   text-overflow: ellipsis;
 }
 
+.card-name:hover {
+  color: #6366f1;
+}
+
 .card-code {
-  font-size: 12px;
+  font-size: 11px;
   color: rgba(255, 255, 255, 0.4);
-  margin-top: 2px;
 }
 
-.card-right {
-  text-align: right;
-  min-width: 80px;
+.card-price-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
-.card-price {
-  font-size: 15px;
-  font-weight: 600;
+.price-current {
+  font-size: 14px;
   color: #fff;
-}
-
-.card-change {
-  font-size: 12px;
   font-weight: 500;
-  margin-top: 2px;
 }
 
-.card-change.up {
+.card-change-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.change-text {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.card-hilow-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+}
+
+.price-high, .price-low {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+}
+
+.price-high .label, .price-low .label {
+  color: rgba(255, 255, 255, 0.3);
+  width: 10px;
+}
+
+.price-high .value, .price-low .value {
+  font-weight: 500;
+}
+
+.card-vol-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.vol-value {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.card-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.up {
   color: #ff6b6b;
 }
 
-.card-change.down {
+.down {
   color: #38ef7d;
 }
 
-.card-delete-btn {
-  flex-shrink: 0;
-  opacity: 0.6;
+.delete-btn {
+  color: rgba(255, 107, 107, 0.6) !important;
 }
 
-.card-delete-btn:hover {
-  opacity: 1;
+.delete-btn:hover {
+  color: #ff6b6b !important;
 }
 
 .bottom-tabs {
@@ -745,7 +859,7 @@ onUnmounted(() => stopAutoRefresh())
 @media (max-width: 480px) {
   .watchlist {
     padding: 12px;
-    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+    padding-bottom: calc(70px + 6px + env(safe-area-inset-bottom));
   }
 
   .watchlist-header {
