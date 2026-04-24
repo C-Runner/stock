@@ -1216,6 +1216,7 @@ const handleLogout = async () => {
   font-weight: 600;
   font-size: 13px;
   color: rgba(255, 255, 255, 0.6);
+  background: rgba(10, 10, 15, 1);
 }
 
 .header-action-cell {
@@ -1224,6 +1225,7 @@ const handleLogout = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  background: rgba(10, 10, 15, 1);
 }
 
 .table-row {

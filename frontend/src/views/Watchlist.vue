@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   NButton, NIcon,
@@ -21,7 +21,6 @@ const backupStatus = ref('')
 const autoRefresh = ref(true)
 const refreshInterval = ref(30)
 const lastRefresh = ref<Date | null>(null)
-const refreshTimer = ref<ReturnType<typeof setInterval> | null>(null)
 
 const showSearch = ref(false)
 
@@ -119,11 +118,6 @@ const handleBackup = async () => {
   }
 }
 
-const startAutoRefresh = () => {
-  if (refreshTimer.value) clearInterval(refreshTimer.value)
-  refreshTimer.value = setInterval(fetchQuotes, refreshInterval.value * 1000)
-}
-
 const stopAutoRefresh = () => {
   if (refreshTimer.value) {
     clearInterval(refreshTimer.value)
@@ -136,6 +130,35 @@ const formatVolume = (vol: number): string => {
   if (vol >= 10000) return (vol / 10000).toFixed(2) + 'W'
   if (vol >= 1000) return (vol / 1000).toFixed(2) + 'K'
   return vol.toFixed(0)
+}
+
+const isMarketOpen = (): boolean => {
+  const now = new Date()
+  const day = now.getDay()
+  if (day === 0 || day === 6) return false
+
+  const shanghaiOffset = 8 * 60 * 60 * 1000
+  const shanghaiTime = new Date(now.getTime() + (now.getTimezoneOffset() * 60 * 1000) + shanghaiOffset)
+  const hours = shanghaiTime.getHours()
+  const minutes = shanghaiTime.getMinutes()
+  const totalMinutes = hours * 60 + minutes
+
+  const morningStart = 9 * 60 + 30
+  const morningEnd = 11 * 60 + 30
+  const afternoonStart = 13 * 60
+  const afternoonEnd = 15 * 60
+
+  return (totalMinutes >= morningStart && totalMinutes < morningEnd) ||
+         (totalMinutes >= afternoonStart && totalMinutes < afternoonEnd)
+}
+
+const refreshTimer = ref<ReturnType<typeof setInterval> | null>(null)
+
+const startAutoRefresh = () => {
+  if (refreshTimer.value) clearInterval(refreshTimer.value)
+  refreshTimer.value = setInterval(() => {
+    if (isMarketOpen()) fetchQuotes()
+  }, refreshInterval.value * 1000)
 }
 
 watch(autoRefresh, (enabled) => {
@@ -228,55 +251,51 @@ onUnmounted(() => stopAutoRefresh())
           {{ lastRefresh.toLocaleTimeString() }}
         </span>
       </div>
-      <div class="table-content">
-        <n-spin :show="loading">
-          <n-empty v-if="!loading && tableData.length === 0" description="No stocks in watchlist" />
-          <div v-else class="watchlist-cards">
-            <div
-              v-for="row in tableData"
-              :key="row.code"
-              class="watchlist-card"
-              @click="router.push({ path: `/analysis/${row.code}`, query: { from: '/watchlist' } })"
-            >
-              <div class="card-left">
-                <div class="card-name">{{ row.name }}</div>
-                <div class="card-code">{{ row.code }}</div>
+      <div class="table-container">
+        <div class="table-scroll-wrapper">
+          <div class="table-header-row" v-if="tableData.length > 0">
+            <div class="header-stock-cell">Stock</div>
+            <div class="header-scroll-part">
+              <div class="header-price-cell">Price</div>
+              <div class="header-change-cell">Change</div>
+              <div class="header-hilow-cell">High / Low</div>
+              <div class="header-volume-cell">Volume</div>
+              <div class="header-action-cell"></div>
+            </div>
+          </div>
+          <div
+            v-for="row in tableData"
+            :key="row.code"
+            class="table-row"
+            @click="router.push({ path: `/analysis/${row.code}`, query: { from: '/watchlist' } })"
+          >
+            <div class="stock-cell">
+              <div class="stock-name">{{ row.name }}</div>
+              <div class="stock-code">{{ row.code }}</div>
+            </div>
+            <div class="table-scroll-part">
+              <div class="price-cell">
+                <span v-if="row.quote" class="price-value">¥{{ row.quote.current.toFixed(2) }}</span>
+                <span v-else class="price-value">-</span>
               </div>
-              <div class="card-price-cell" v-if="row.quote">
-                <div class="price-current">¥{{ row.quote.current.toFixed(2) }}</div>
-              </div>
-              <div class="card-price-cell" v-else>
-                <div class="price-current">-</div>
-              </div>
-              <div class="card-change-cell" v-if="row.quote">
-                <div class="change-text" :class="row.quote.current >= row.quote.prevClose ? 'up' : 'down'">
+              <div class="change-cell">
+                <span v-if="row.quote" class="change-value" :class="row.quote.current >= row.quote.prevClose ? 'up' : 'down'">
                   {{ row.quote.current >= row.quote.prevClose ? '+' : '' }}{{ (((row.quote.current - row.quote.prevClose) / row.quote.prevClose) * 100).toFixed(2) }}%
+                </span>
+                <span v-else class="change-value">-</span>
+              </div>
+              <div class="hilow-cell">
+                <div v-if="row.quote" class="hilow">
+                  <span class="hi">H: ¥{{ row.quote.high.toFixed(2) }}</span>
+                  <span class="lo">L: ¥{{ row.quote.low.toFixed(2) }}</span>
                 </div>
+                <span v-else class="price-value">-</span>
               </div>
-              <div class="card-change-cell" v-else>
-                <div class="change-text">-</div>
+              <div class="volume-cell">
+                <span v-if="row.quote" class="vol-value">{{ formatVolume(row.quote.volume) }}</span>
+                <span v-else class="vol-value">-</span>
               </div>
-              <div class="card-hilow-cell" v-if="row.quote">
-                <div class="price-high">
-                  <span class="label">H</span>
-                  <span class="value up">¥{{ row.quote.high.toFixed(2) }}</span>
-                </div>
-                <div class="price-low">
-                  <span class="label">L</span>
-                  <span class="value down">¥{{ row.quote.low.toFixed(2) }}</span>
-                </div>
-              </div>
-              <div class="card-hilow-cell" v-else>
-                <div class="price-high">-</div>
-                <div class="price-low">-</div>
-              </div>
-              <div class="card-vol-cell" v-if="row.quote">
-                <div class="vol-value">{{ formatVolume(row.quote.volume) }}</div>
-              </div>
-              <div class="card-vol-cell" v-else>
-                <div class="vol-value">-</div>
-              </div>
-              <div class="card-action">
+              <div class="action-cell">
                 <n-button text @click.stop="handleRemove(row.code)" class="delete-btn">
                   <template #icon>
                     <n-icon><IconDelete /></n-icon>
@@ -285,7 +304,11 @@ onUnmounted(() => stopAutoRefresh())
               </div>
             </div>
           </div>
-        </n-spin>
+          <n-empty v-if="!loading && tableData.length === 0" description="No stocks in watchlist" />
+          <div v-if="loading" class="loading-overlay">
+            <n-spin :show="loading" description="Loading..." />
+          </div>
+        </div>
       </div>
     </div>
 
@@ -322,6 +345,8 @@ onUnmounted(() => stopAutoRefresh())
   box-sizing: border-box;
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .background {
@@ -545,7 +570,6 @@ onUnmounted(() => stopAutoRefresh())
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-bottom: 2px solid rgba(99, 102, 241, 0.3);
   backdrop-filter: blur(20px);
   position: relative;
   padding: 0;
@@ -554,6 +578,209 @@ onUnmounted(() => stopAutoRefresh())
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow: hidden;
+}
+
+.table-scroll-wrapper {
+  flex: 1;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  overscroll-behavior: contain;
+}
+
+.table-scroll-wrapper::-webkit-scrollbar {
+  display: none;
+}
+
+.table-container {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow: hidden;
+}
+
+.table-header-row {
+  display: flex;
+  height: 40px;
+  background: rgba(10, 10, 15, 0.95);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.header-stock-cell {
+  width: 100px;
+  min-width: 100px;
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 0 12px;
+  box-sizing: border-box;
+  background: rgba(10, 10, 15, 1);
+  position: sticky;
+  left: 0;
+  z-index: 11;
+}
+
+.header-scroll-part {
+  display: flex;
+  flex: 1;
+}
+
+.header-price-cell,
+.header-change-cell,
+.header-hilow-cell,
+.header-volume-cell {
+  width: 90px;
+  min-width: 90px;
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(10, 10, 15, 1);
+}
+
+.header-action-cell {
+  width: 50px;
+  min-width: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 15, 1);
+}
+
+.table-row {
+  display: flex;
+  height: 60px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: background 0.2s ease;
+  width: max-content;
+  min-width: 100%;
+}
+
+.table-row:hover {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.stock-cell {
+  width: 100px;
+  min-width: 100px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 12px;
+  gap: 4px;
+  line-height: 1.3;
+  box-sizing: border-box;
+  background: rgba(10, 10, 15, 1);
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+.table-scroll-part {
+  display: flex;
+  flex: 1;
+}
+
+.price-cell,
+.change-cell,
+.hilow-cell,
+.volume-cell {
+  width: 90px;
+  min-width: 90px;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: #fff;
+  background: rgba(10, 10, 15, 1);
+}
+
+.action-cell {
+  width: 50px;
+  min-width: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 15, 1);
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 27, 75, 0.8);
+  z-index: 20;
+}
+
+.stock-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stock-name:hover {
+  color: #6366f1;
+}
+
+.stock-code {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.price-value {
+  font-weight: 500;
+}
+
+.change-value {
+  font-weight: 600;
+}
+
+.hilow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+}
+
+.hilow .hi {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.hilow .lo {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.vol-value {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.up { color: #ff6b6b; }
+.down { color: #38ef7d; }
+
+.delete-btn {
+  color: rgba(255, 107, 107, 0.6) !important;
+}
+
+.delete-btn:hover {
+  color: #ff6b6b !important;
 }
 
 .table-header {
@@ -567,29 +794,6 @@ onUnmounted(() => stopAutoRefresh())
   font-size: 16px;
   color: #fff;
   flex: 0 0 auto;
-}
-
-.table-content {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  background: transparent !important;
-}
-
-.watchlist-cards {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
-}
-
-.watchlist-cards::-webkit-scrollbar {
-  display: none;
 }
 
 @media (max-width: 768px) {
@@ -615,30 +819,22 @@ onUnmounted(() => stopAutoRefresh())
     justify-content: center;
   }
 
-  .watchlist-card {
-    grid-template-columns: minmax(80px, 1fr) 70px 70px 80px 60px 32px;
-    height: 52px;
-    padding: 0 8px;
+  .watchlist-table th,
+  .watchlist-table td {
+    padding: 10px 8px;
+    font-size: 12px;
   }
 
-  .card-name {
+  .stock-name {
     font-size: 13px;
   }
 
-  .card-code {
+  .stock-code {
     font-size: 10px;
   }
 
-  .price-current, .change-text {
-    font-size: 13px;
-  }
-
-  .price-high, .price-low {
+  .hilow {
     font-size: 10px;
-  }
-
-  .vol-value {
-    font-size: 11px;
   }
 }
 
@@ -657,141 +853,6 @@ onUnmounted(() => stopAutoRefresh())
 
 .table-card :deep(.n-icon) {
   background: transparent !important;
-}
-
-.watchlist-cards {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow-x: hidden;
-}
-
-.watchlist-cards::-webkit-scrollbar {
-  display: none;
-}
-
-.watchlist-card {
-  display: grid;
-  grid-template-columns: minmax(100px, 1fr) 80px 80px 90px 70px 32px;
-  align-items: center;
-  height: 60px;
-  padding: 0 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  cursor: pointer;
-  transition: background 0.2s ease;
-  flex-shrink: 0;
-  overflow: visible;
-}
-
-.watchlist-card:hover {
-  background: rgba(99, 102, 241, 0.08);
-}
-
-.card-left {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 3px;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.card-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.card-name:hover {
-  color: #6366f1;
-}
-
-.card-code {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.4);
-}
-
-.card-price-cell {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.price-current {
-  font-size: 14px;
-  color: #fff;
-  font-weight: 500;
-}
-
-.card-change-cell {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.change-text {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.card-hilow-cell {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 1px;
-}
-
-.price-high, .price-low {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-}
-
-.price-high .label, .price-low .label {
-  color: rgba(255, 255, 255, 0.3);
-  width: 10px;
-}
-
-.price-high .value, .price-low .value {
-  font-weight: 500;
-}
-
-.card-vol-cell {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.vol-value {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.card-action {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.up {
-  color: #ff6b6b;
-}
-
-.down {
-  color: #38ef7d;
-}
-
-.delete-btn {
-  color: rgba(255, 107, 107, 0.6) !important;
-}
-
-.delete-btn:hover {
-  color: #ff6b6b !important;
 }
 
 .bottom-tabs {
