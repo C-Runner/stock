@@ -66,30 +66,41 @@ export type StockAnalysisResponse = StockAnalysis | NoPositionResponse
 
 export interface MAData {
   period: number
-  value: number
+  values: number[]
 }
 
 export interface RSIData {
   period: number
-  value: number
+  values: number[]
 }
 
 export interface MACDData {
-  dif: number
-  dea: number
-  macd: number
+  dif: number[]
+  dea: number[]
+  macd: number[]
 }
 
 export interface KDJData {
-  k: number
-  d: number
-  j: number
+  k: number[]
+  d: number[]
+  j: number[]
 }
 
 export interface BOLLData {
-  upper: number
-  mid: number
-  lower: number
+  upper: number[]
+  mid: number[]
+  lower: number[]
+}
+
+export interface WRData {
+  period: number
+  values: number[]
+}
+
+export interface DMIData {
+  plusDI: number
+  minusDI: number
+  adx: number
 }
 
 export interface PricePoint {
@@ -110,6 +121,8 @@ export interface TechnicalAnalysis {
   macd: MACDData
   kdj: KDJData
   boll: BOLLData
+  wr: WRData[]
+  dmi: DMIData
   recentPrices: PricePoint[]
 }
 

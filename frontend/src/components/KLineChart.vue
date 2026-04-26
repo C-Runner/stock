@@ -8,12 +8,12 @@ import {
   TooltipComponent,
   LegendComponent,
   GridComponent,
-  DataZoomComponent
+  DataZoomComponent,
+  MarkLineComponent
 } from 'echarts/components'
 import type { EChartsOption } from 'echarts'
-import type { PricePoint, MAData } from '../api'
+import type { PricePoint, MAData, RSIData, KDJData, MACDData, BOLLData } from '../api'
 
-// Register ECharts components
 use([
   CanvasRenderer,
   CandlestickChart,
@@ -22,17 +22,23 @@ use([
   TooltipComponent,
   LegendComponent,
   GridComponent,
-  DataZoomComponent
+  DataZoomComponent,
+  MarkLineComponent
 ])
 
 interface Props {
   priceData: PricePoint[]
   maData?: MAData[]
+  emaData?: MAData[]
+  rsiData?: RSIData[]
+  kdjData?: KDJData
+  macdData?: MACDData
+  bollData?: BOLLData
   height?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  height: '450px'
+  height: '700px'
 })
 
 const windowWidth = ref(window.innerWidth)
@@ -50,14 +56,48 @@ onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
 })
 
-// Process data for candlestick chart
+// Calculate MA time series from price data
+const calculateMA = (period: number): number[] => {
+  const closes = props.priceData.map(p => p.close)
+  const result: number[] = []
+  for (let i = period - 1; i < closes.length; i++) {
+    let sum = 0
+    for (let j = i - period + 1; j <= i; j++) {
+      sum += closes[j]!
+    }
+    result.push(sum / period)
+  }
+  return result
+}
+
+// Calculate EMA time series from price data
+const calculateEMA = (period: number): number[] => {
+  const closes = props.priceData.map(p => p.close)
+  const result: number[] = []
+  const multiplier = 2.0 / (period + 1)
+
+  for (let i = period - 1; i < closes.length; i++) {
+    if (i === period - 1) {
+      let sum = 0
+      for (let j = 0; j <= i; j++) {
+        sum += closes[j]!
+      }
+      result.push(sum / period)
+    } else {
+      const prevEMA = result[result.length - 1]!
+      result.push((closes[i]! - prevEMA) * multiplier + prevEMA)
+    }
+  }
+  return result
+}
+
+// Process data for candlestick chart - using aligned data
 const candlestickData = computed(() =>
-  props.priceData.map(p => [p.open, p.close, p.low, p.high])
+  alignedPriceData.value.map(p => [p.open, p.close, p.low, p.high])
 )
 
 const dates = computed(() =>
   props.priceData.map(p => {
-    // On mobile, show fewer date labels
     if (isMobile.value) {
       const parts = p.date.split('-')
       return `${parts[1]}/${parts[2]}`
@@ -66,27 +106,71 @@ const dates = computed(() =>
   })
 )
 
+// Aligned price data for all charts (from index 19 to match indicator start)
+const alignedPriceData = computed(() => props.priceData.slice(19))
+
+// MA data computed from aligned price data
+const ma5Data = computed(() => calculateMA(5).slice(-ma20Data.value.length))
+const ma10Data = computed(() => calculateMA(10).slice(-ma20Data.value.length))
+const ma20Data = computed(() => calculateMA(20))
+
+// Align dates with indicator data (MA20 starts at index 19)
+const alignedDates = computed(() => {
+  const startIdx = 19 // MA20 period - 1
+  return dates.value.slice(startIdx)
+})
+
+// EMA data computed from aligned price data
+const ema12Data = computed(() => calculateEMA(12).slice(-ma20Data.value.length))
+const ema26Data = computed(() => calculateEMA(26).slice(-ma20Data.value.length))
+
+// BOLL data computed from aligned price data
+const bollDataComputed = computed(() => {
+  const closes = alignedPriceData.value.map(p => p.close)
+  const upper: number[] = []
+  const mid: number[] = []
+  const lower: number[] = []
+
+  for (let i = 1; i < closes.length; i++) {
+    let sum = 0
+    for (let j = i - 1; j <= i; j++) {
+      sum += closes[j]!
+    }
+    const ma20 = sum / 2
+
+    let variance = 0
+    for (let j = i - 1; j <= i; j++) {
+      const diff = closes[j]! - ma20
+      variance += diff * diff
+    }
+    const stdDev = Math.sqrt(variance / 2)
+
+    upper.push(ma20 + 2 * stdDev)
+    mid.push(ma20)
+    lower.push(ma20 - 2 * stdDev)
+  }
+  return { upper, mid, lower }
+})
+
+// RSI data from backend (time series) - slice to match aligned data length
+const rsi6Data = computed(() => props.rsiData?.find(r => r.period === 6)?.values.slice(-ma20Data.value.length) ?? [])
+const rsi12Data = computed(() => props.rsiData?.find(r => r.period === 12)?.values.slice(-ma20Data.value.length) ?? [])
+const rsi24Data = computed(() => props.rsiData?.find(r => r.period === 24)?.values.slice(-ma20Data.value.length) ?? [])
+
+// KDJ data from backend (time series) - slice to match aligned data length
+const kData = computed(() => props.kdjData?.k.slice(-ma20Data.value.length) ?? [])
+const dData = computed(() => props.kdjData?.d.slice(-ma20Data.value.length) ?? [])
+const jData = computed(() => props.kdjData?.j.slice(-ma20Data.value.length) ?? [])
+
+// Volume data - using aligned data
 const volumeData = computed(() =>
-  props.priceData.map(p => ({
+  alignedPriceData.value.slice(-ma20Data.value.length).map(p => ({
     value: p.volume,
     itemStyle: {
       color: p.close >= p.open ? '#ef5350' : '#26a69a'
     }
   }))
 )
-
-// Get MA value for a period
-const getMAValue = (period: number): number => {
-  const ma = props.maData?.find(m => m.period === period)
-  return ma?.value ?? 0
-}
-
-// MA line data - replicate the value across all dates for display
-const getMAData = (period: number) => {
-  const value = getMAValue(period)
-  if (!value) return []
-  return Array(dates.value.length).fill(value)
-}
 
 const option = computed<EChartsOption>(() => {
   const mobile = isMobile.value
@@ -106,125 +190,91 @@ const option = computed<EChartsOption>(() => {
       textStyle: { color: 'rgba(255, 255, 255, 0.9)', fontSize: mobile ? 11 : 12 }
     },
     legend: {
-      data: mobile ? [] : ['Candlestick', 'MA5', 'MA10', 'MA20', 'Volume'],
+      data: mobile ? [] : ['Candlestick', 'MA5', 'MA10', 'MA20', 'BOLL-U', 'BOLL-L', 'Volume', 'RSI', 'KDJ'],
       top: 0,
-      textStyle: { color: 'rgba(255, 255, 255, 0.6)', fontSize: mobile ? 10 : 12 }
+      textStyle: { color: 'rgba(255, 255, 255, 0.6)', fontSize: mobile ? 10 : 12 },
+      inactiveColor: 'rgba(255, 255, 255, 0.2)'
     },
-    grid: [
-      { left: leftMargin, right: rightMargin, top: '8%', height: mobile ? '45%' : '50%' },
-      { left: leftMargin, right: rightMargin, top: mobile ? '60%' : '68%', height: mobile ? '18%' : '20%' }
+    grid: mobile ? [
+      // Grid 0: Candlestick + MA/EMA/BOLL (main chart) - mobile optimized
+      { left: leftMargin, right: rightMargin, top: '6%', height: '36%' },
+      // Grid 1: Volume
+      { left: leftMargin, right: rightMargin, top: '48%', height: '10%' },
+      // Grid 2: RSI
+      { left: leftMargin, right: rightMargin, top: '62%', height: '14%' },
+      // Grid 3: KDJ
+      { left: leftMargin, right: rightMargin, top: '80%', height: '14%' }
+    ] : [
+      // Grid 0: Candlestick + MA/EMA/BOLL (main chart)
+      { left: leftMargin, right: rightMargin, top: '8%', height: '38%' },
+      // Grid 1: Volume
+      { left: leftMargin, right: rightMargin, top: '52%', height: '10%' },
+      // Grid 2: RSI
+      { left: leftMargin, right: rightMargin, top: '66%', height: '12%' },
+      // Grid 3: KDJ
+      { left: leftMargin, right: rightMargin, top: '82%', height: '12%' }
     ],
-    xAxis: [
-      {
-        type: 'category',
-        data: dates.value,
-        gridIndex: 0,
-        axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } },
-        axisLabel: {
-          color: 'rgba(255, 255, 255, 0.5)',
-          fontSize,
-          interval: mobile ? 4 : 0,
-          height: labelHeight
-        }
-      },
-      {
-        type: 'category',
-        data: dates.value,
-        gridIndex: 1,
-        axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } },
-        axisLabel: {
-          color: 'rgba(255, 255, 255, 0.5)',
-          fontSize,
-          interval: mobile ? 4 : 0,
-          height: labelHeight
-        }
-      }
-    ],
+    xAxis: (mobile ? [
+      { type: 'category' as const, data: alignedDates.value, gridIndex: 0, axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } }, axisLabel: { color: 'rgba(255, 255, 255, 0.5)', fontSize, interval: 4, height: labelHeight } },
+      { type: 'category' as const, data: alignedDates.value, gridIndex: 1, axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } }, axisLabel: { color: 'rgba(255, 255, 255, 0.5)', fontSize, interval: 4, height: labelHeight } },
+      { type: 'category' as const, data: alignedDates.value, gridIndex: 2, axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } }, axisLabel: { color: 'rgba(255, 255, 255, 0.5)', fontSize, interval: 4, height: labelHeight } },
+      { type: 'category' as const, data: alignedDates.value, gridIndex: 3, axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } }, axisLabel: { color: 'rgba(255, 255, 255, 0.5)', fontSize, interval: 4, height: labelHeight } }
+    ] : [
+      { type: 'category' as const, data: alignedDates.value, gridIndex: 0, axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } }, axisLabel: { color: 'rgba(255, 255, 255, 0.5)', fontSize, interval: 0, height: labelHeight } },
+      { type: 'category' as const, data: alignedDates.value, gridIndex: 1, axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } }, axisLabel: { color: 'rgba(255, 255, 255, 0.5)', fontSize, interval: 0, height: labelHeight } },
+      { type: 'category' as const, data: alignedDates.value, gridIndex: 2, axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } }, axisLabel: { color: 'rgba(255, 255, 255, 0.5)', fontSize, interval: 0, height: labelHeight } },
+      { type: 'category' as const, data: alignedDates.value, gridIndex: 3, axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } }, axisLabel: { color: 'rgba(255, 255, 255, 0.5)', fontSize, interval: 0, height: labelHeight } }
+    ]),
     yAxis: [
-      {
-        scale: true,
-        gridIndex: 0,
-        splitLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.05)' } },
-        axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } },
-        axisLabel: {
-          color: 'rgba(255, 255, 255, 0.5)',
-          fontSize,
-          margin: mobile ? 4 : 8
-        }
-      },
-      {
-        scale: true,
-        gridIndex: 1,
-        splitNumber: 2,
-        splitLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.05)' } },
-        axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } },
-        axisLabel: {
-          color: 'rgba(255, 255, 255, 0.5)',
-          fontSize,
-          margin: mobile ? 4 : 8
-        }
-      }
+      { scale: true, gridIndex: 0, splitLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.05)' } }, axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } }, axisLabel: { color: 'rgba(255, 255, 255, 0.5)', fontSize, margin: mobile ? 4 : 8 } },
+      { scale: true, gridIndex: 1, splitNumber: 2, splitLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.05)' } }, axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } }, axisLabel: { color: 'rgba(255, 255, 255, 0.5)', fontSize: mobile ? 8 : 10, margin: mobile ? 2 : 4, formatter: (val: number) => {
+        if (val >= 100000000) return (val / 100000000).toFixed(1) + 'E'
+        if (val >= 10000000) return (val / 10000000).toFixed(1) + 'C'
+        if (val >= 1000000) return (val / 1000000).toFixed(1) + 'M'
+        if (val >= 1000) return (val / 1000).toFixed(0) + 'K'
+        return String(val)
+      } } },
+      { scale: true, gridIndex: 2, min: 0, max: 100, splitNumber: mobile ? 2 : 4, splitLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.05)' } }, axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } }, axisLabel: { color: 'rgba(255, 255, 255, 0.5)', fontSize: mobile ? 9 : 10, margin: mobile ? 2 : 6, formatter: (val: number) => val === 0 || val === 50 || val === 100 ? String(val) : '' } },
+      { scale: true, gridIndex: 3, splitNumber: mobile ? 2 : 4, splitLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.05)' } }, axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } }, axisLabel: { color: 'rgba(255, 255, 255, 0.5)', fontSize: mobile ? 9 : 10, margin: mobile ? 2 : 6 } }
     ],
     dataZoom: mobile ? [
-      { type: 'inside', xAxisIndex: [0, 1], start: 60, end: 100 },
-      { type: 'slider', xAxisIndex: [0, 1], start: 60, end: 100, top: '88%', height: '4%' }
+      { type: 'inside', xAxisIndex: [0, 1, 2, 3], start: 50, end: 100 },
+      { type: 'slider', xAxisIndex: [0, 1, 2, 3], start: 50, end: 100, top: '96%', height: '4%' }
     ] : [
-      { type: 'inside', xAxisIndex: [0, 1], start: 70, end: 100 },
-      { type: 'slider', xAxisIndex: [0, 1], start: 70, end: 100, top: '92%' }
+      { type: 'inside', xAxisIndex: [0, 1, 2, 3], start: 70, end: 100 },
+      { type: 'slider', xAxisIndex: [0, 1, 2, 3], start: 70, end: 100, top: '96%', height: '3%' }
     ],
     series: [
-      {
-        name: 'Candlestick',
-        type: 'candlestick',
-        data: candlestickData.value,
-        xAxisIndex: 0,
-        yAxisIndex: 0,
-        itemStyle: {
-          color: '#ef5350',
-          color0: '#26a69a',
-          borderColor: '#ef5350',
-          borderColor0: '#26a69a'
-        },
-        barWidth: mobile ? '40%' : '60%'
-      },
-      {
-        name: 'MA5',
-        type: 'line',
-        data: getMAData(5),
-        xAxisIndex: 0,
-        yAxisIndex: 0,
-        smooth: true,
-        showSymbol: false,
-        lineStyle: { width: mobile ? 1 : 1.5, color: '#ff6b6b' }
-      },
-      {
-        name: 'MA10',
-        type: 'line',
-        data: getMAData(10),
-        xAxisIndex: 0,
-        yAxisIndex: 0,
-        smooth: true,
-        showSymbol: false,
-        lineStyle: { width: mobile ? 1 : 1.5, color: '#feca57' }
-      },
-      {
-        name: 'MA20',
-        type: 'line',
-        data: getMAData(20),
-        xAxisIndex: 0,
-        yAxisIndex: 0,
-        smooth: true,
-        showSymbol: false,
-        lineStyle: { width: mobile ? 1 : 1.5, color: '#54a0ff' }
-      },
-      {
-        name: 'Volume',
-        type: 'bar',
-        data: volumeData.value,
-        xAxisIndex: 1,
-        yAxisIndex: 1,
-        barWidth: mobile ? '40%' : '60%'
-      }
+      // Grid 0: Candlestick + MA/EMA/BOLL
+      { name: 'Candlestick', type: 'candlestick', data: candlestickData.value, xAxisIndex: 0, yAxisIndex: 0, itemStyle: { color: '#ef5350', color0: '#26a69a', borderColor: '#ef5350', borderColor0: '#26a69a' }, barWidth: mobile ? '40%' : '60%' },
+      { name: 'MA5', type: 'line', data: ma5Data.value, xAxisIndex: 0, yAxisIndex: 0, smooth: true, showSymbol: false, lineStyle: { width: mobile ? 1 : 1.5, color: '#ff6b6b' } },
+      { name: 'MA10', type: 'line', data: ma10Data.value, xAxisIndex: 0, yAxisIndex: 0, smooth: true, showSymbol: false, lineStyle: { width: mobile ? 1 : 1.5, color: '#feca57' } },
+      { name: 'MA20', type: 'line', data: ma20Data.value, xAxisIndex: 0, yAxisIndex: 0, smooth: true, showSymbol: false, lineStyle: { width: mobile ? 1 : 1.5, color: '#54a0ff' } },
+      { name: 'EMA12', type: 'line', data: ema12Data.value, xAxisIndex: 0, yAxisIndex: 0, smooth: true, showSymbol: false, lineStyle: { width: mobile ? 1 : 1.5, color: '#9b59b6', type: 'dashed' } },
+      { name: 'EMA26', type: 'line', data: ema26Data.value, xAxisIndex: 0, yAxisIndex: 0, smooth: true, showSymbol: false, lineStyle: { width: mobile ? 1 : 1.5, color: '#e91e63', type: 'dashed' } },
+      { name: 'BOLL-U', type: 'line', data: bollDataComputed.value.upper, xAxisIndex: 0, yAxisIndex: 0, smooth: true, showSymbol: false, lineStyle: { width: mobile ? 1 : 1, color: 'rgba(255, 255, 255, 0.4)', type: 'dotted' } },
+      { name: 'BOLL-L', type: 'line', data: bollDataComputed.value.lower, xAxisIndex: 0, yAxisIndex: 0, smooth: true, showSymbol: false, lineStyle: { width: mobile ? 1 : 1, color: 'rgba(255, 255, 255, 0.4)', type: 'dotted' } },
+
+      // Grid 1: Volume
+      { name: 'Volume', type: 'bar', data: volumeData.value, xAxisIndex: 1, yAxisIndex: 1, barWidth: mobile ? '40%' : '60%' },
+
+      // Grid 2: RSI (simplify on mobile - only show RSI6)
+      ...(mobile ? [
+        { name: 'RSI6' as const, type: 'line' as const, data: rsi6Data.value, xAxisIndex: 2, yAxisIndex: 2, smooth: true, showSymbol: false, lineStyle: { width: 1, color: '#ff6b6b' } },
+        { name: 'RSI_70' as const, type: 'line' as const, data: Array(ma20Data.value.length).fill(70), xAxisIndex: 2, yAxisIndex: 2, showSymbol: false, lineStyle: { color: 'rgba(255,107,107,0.5)', type: 'dashed' as const, width: 1 } },
+        { name: 'RSI_30' as const, type: 'line' as const, data: Array(ma20Data.value.length).fill(30), xAxisIndex: 2, yAxisIndex: 2, showSymbol: false, lineStyle: { color: 'rgba(56,239,125,0.5)', type: 'dashed' as const, width: 1 } }
+      ] : [
+        { name: 'RSI6' as const, type: 'line' as const, data: rsi6Data.value, xAxisIndex: 2, yAxisIndex: 2, smooth: true, showSymbol: false, lineStyle: { width: 1.5, color: '#ff6b6b' } },
+        { name: 'RSI12' as const, type: 'line' as const, data: rsi12Data.value, xAxisIndex: 2, yAxisIndex: 2, smooth: true, showSymbol: false, lineStyle: { width: 1.5, color: '#feca57' } },
+        { name: 'RSI24' as const, type: 'line' as const, data: rsi24Data.value, xAxisIndex: 2, yAxisIndex: 2, smooth: true, showSymbol: false, lineStyle: { width: 1.5, color: '#54a0ff' } },
+        { name: 'RSI_70' as const, type: 'line' as const, data: Array(ma20Data.value.length).fill(70), xAxisIndex: 2, yAxisIndex: 2, showSymbol: false, lineStyle: { color: 'rgba(255,107,107,0.4)', type: 'dashed' as const, width: 1 }, markLine: { silent: true, symbol: 'none', label: { show: true, formatter: '70', position: 'end' as const, color: 'rgba(255,107,107,0.8)' }, data: [{ yAxis: 70 }] } },
+        { name: 'RSI_30' as const, type: 'line' as const, data: Array(ma20Data.value.length).fill(30), xAxisIndex: 2, yAxisIndex: 2, showSymbol: false, lineStyle: { color: 'rgba(56,239,125,0.4)', type: 'dashed' as const, width: 1 }, markLine: { silent: true, symbol: 'none', label: { show: true, formatter: '30', position: 'end' as const, color: 'rgba(56,239,125,0.8)' }, data: [{ yAxis: 30 }] } }
+      ]),
+
+      // Grid 3: KDJ
+      { name: 'K', type: 'line', data: kData.value, xAxisIndex: 3, yAxisIndex: 3, smooth: true, showSymbol: false, lineStyle: { width: mobile ? 1 : 1.5, color: '#ff6b6b' } },
+      { name: 'D', type: 'line', data: dData.value, xAxisIndex: 3, yAxisIndex: 3, smooth: true, showSymbol: false, lineStyle: { width: mobile ? 1 : 1.5, color: '#feca57' } },
+      { name: 'J', type: 'line', data: jData.value, xAxisIndex: 3, yAxisIndex: 3, smooth: true, showSymbol: false, lineStyle: { width: mobile ? 1 : 1.5, color: '#9b59b6' } }
     ]
   }
 })
@@ -234,7 +284,7 @@ const option = computed<EChartsOption>(() => {
   <v-chart
     :option="option"
     :autoresize="true"
-    :style="{ height: isMobile ? '300px' : props.height }"
+    :style="{ height: isMobile ? '500px' : props.height }"
   />
 </template>
 

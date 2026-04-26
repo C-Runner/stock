@@ -24,6 +24,29 @@
       <n-card class="analysis-card" :bordered="false" :content-style="{ padding: '16px' }" :header-style="{ padding: '16px 20px', borderBottom: 'none' }" :shadow="false">
         <template #header>
           <div class="card-header">
+            <n-icon size="20"><IconChart /></n-icon>
+            <span>Analysis</span>
+          </div>
+        </template>
+        <div class="quick-actions">
+          <div class="action-item" @click="showAIAnalysis = true">
+            <div class="action-icon ai">
+              <n-icon size="24"><IconRobot /></n-icon>
+            </div>
+            <span class="action-label">AI</span>
+          </div>
+          <div class="action-item" @click="scrollToTechnical">
+            <div class="action-icon tech">
+              <n-icon size="24"><IconTrend /></n-icon>
+            </div>
+            <span class="action-label">Technical</span>
+          </div>
+        </div>
+      </n-card>
+
+      <n-card class="analysis-card" :bordered="false" :content-style="{ padding: '16px' }" :header-style="{ padding: '16px 20px', borderBottom: 'none' }" :shadow="false">
+        <template #header>
+          <div class="card-header">
             <n-icon size="20"><IconWallet /></n-icon>
             <span>Position Analysis</span>
           </div>
@@ -32,10 +55,11 @@
         <template v-else>
           <n-alert v-if="error" type="error">{{ error }}</n-alert>
           <template v-else-if="analysis">
-            <div class="stats-grid">
+            <div class="stats-row">
               <div class="stat-item">
                 <span class="stat-label">Holdings</span>
-                <span class="stat-value">{{ analysis.quantity }} shares</span>
+                <span class="stat-value">{{ analysis.quantity }}</span>
+                <span class="stat-unit">shares</span>
               </div>
               <div class="stat-item">
                 <span class="stat-label">Avg Cost</span>
@@ -45,22 +69,22 @@
                 <span class="stat-label">Total Cost</span>
                 <span class="stat-value">¥{{ analysis.cost.toFixed(2) }}</span>
               </div>
-              <div class="stat-item">
+              <div class="stat-item highlight-card">
                 <span class="stat-label">Market Value</span>
                 <span class="stat-value highlight">¥{{ analysis.marketValue.toFixed(2) }}</span>
               </div>
             </div>
-            <n-divider />
             <div class="profit-section">
-              <div class="profit-item">
+              <div class="profit-item main">
                 <span class="profit-label">Profit/Loss</span>
                 <span :class="['profit-value', analysis.profitLoss >= 0 ? 'up' : 'down']">
                   {{ analysis.profitLoss >= 0 ? '+' : '' }}¥{{ analysis.profitLoss.toFixed(2) }}
                 </span>
               </div>
+              <div class="profit-divider"></div>
               <div class="profit-item">
                 <span class="profit-label">Return Rate</span>
-                <span :class="['profit-value', analysis.profitRate >= 0 ? 'up' : 'down']">
+                <span :class="['profit-value rate', analysis.profitRate >= 0 ? 'up' : 'down']">
                   {{ analysis.profitRate >= 0 ? '+' : '' }}{{ analysis.profitRate.toFixed(2) }}%
                 </span>
               </div>
@@ -84,7 +108,7 @@
         </template>
       </n-card>
 
-      <n-card class="analysis-card" :bordered="false" :content-style="{ padding: '16px' }" :header-style="{ padding: '16px 20px', borderBottom: 'none' }" :shadow="false">
+      <n-card id="technical-section" class="analysis-card" :bordered="false" :content-style="{ padding: '16px' }" :header-style="{ padding: '16px 20px', borderBottom: 'none' }" :shadow="false">
         <template #header>
           <div class="card-header">
             <n-icon size="20"><IconTrend /></n-icon>
@@ -100,7 +124,19 @@
               <div class="tech-grid">
                 <div class="tech-item" v-for="ma in technical.ma" :key="'ma'+ma.period">
                   <span class="tech-label">MA{{ ma.period }}</span>
-                  <span class="tech-value">¥{{ ma.value.toFixed(2) }}</span>
+                  <span class="tech-value">¥{{ getLatestValue(ma.values).toFixed(2) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <n-divider />
+
+            <div class="tech-section">
+              <h4 class="tech-title">Exponential Moving Averages</h4>
+              <div class="tech-grid">
+                <div class="tech-item" v-for="ema in technical.ema" :key="'ema'+ema.period">
+                  <span class="tech-label">EMA{{ ema.period }}</span>
+                  <span class="tech-value">¥{{ getLatestValue(ema.values).toFixed(2) }}</span>
                 </div>
               </div>
             </div>
@@ -112,7 +148,7 @@
               <div class="tech-grid">
                 <div class="tech-item" v-for="rsi in technical.rsi" :key="'rsi'+rsi.period">
                   <span class="tech-label">RSI({{ rsi.period }})</span>
-                  <span :class="['tech-value', getRSIClass(rsi.value)]">{{ rsi.value.toFixed(2) }}</span>
+                  <span :class="['tech-value', getRSIClass(getLatestValue(rsi.values))]">{{ getLatestValue(rsi.values).toFixed(2) }}</span>
                 </div>
               </div>
             </div>
@@ -124,16 +160,16 @@
               <div class="tech-grid three-col">
                 <div class="tech-item">
                   <span class="tech-label">DIF</span>
-                  <span class="tech-value">{{ technical.macd.dif.toFixed(4) }}</span>
+                  <span class="tech-value">{{ getLatestValue(technical.macd.dif).toFixed(4) }}</span>
                 </div>
                 <div class="tech-item">
                   <span class="tech-label">DEA</span>
-                  <span class="tech-value">{{ technical.macd.dea.toFixed(4) }}</span>
+                  <span class="tech-value">{{ getLatestValue(technical.macd.dea).toFixed(4) }}</span>
                 </div>
                 <div class="tech-item">
                   <span class="tech-label">MACD</span>
-                  <span :class="['tech-value', technical.macd.macd >= 0 ? 'up' : 'down']">
-                    {{ technical.macd.macd >= 0 ? '+' : '' }}{{ technical.macd.macd.toFixed(4) }}
+                  <span :class="['tech-value', getLatestValue(technical.macd.macd) >= 0 ? 'up' : 'down']">
+                    {{ getLatestValue(technical.macd.macd) >= 0 ? '+' : '' }}{{ getLatestValue(technical.macd.macd).toFixed(4) }}
                   </span>
                 </div>
               </div>
@@ -146,15 +182,15 @@
               <div class="tech-grid three-col">
                 <div class="tech-item">
                   <span class="tech-label">K</span>
-                  <span :class="['tech-value', getKDJClass(technical.kdj.k)]">{{ technical.kdj.k.toFixed(2) }}</span>
+                  <span :class="['tech-value', getKDJClass(getLatestValue(technical.kdj.k))]">{{ getLatestValue(technical.kdj.k).toFixed(2) }}</span>
                 </div>
                 <div class="tech-item">
                   <span class="tech-label">D</span>
-                  <span :class="['tech-value', getKDJClass(technical.kdj.d)]">{{ technical.kdj.d.toFixed(2) }}</span>
+                  <span :class="['tech-value', getKDJClass(getLatestValue(technical.kdj.d))]">{{ getLatestValue(technical.kdj.d).toFixed(2) }}</span>
                 </div>
                 <div class="tech-item">
                   <span class="tech-label">J</span>
-                  <span :class="['tech-value', getKDJClass(technical.kdj.j)]">{{ technical.kdj.j.toFixed(2) }}</span>
+                  <span :class="['tech-value', getKDJClass(getLatestValue(technical.kdj.j))]">{{ getLatestValue(technical.kdj.j).toFixed(2) }}</span>
                 </div>
               </div>
             </div>
@@ -166,15 +202,47 @@
               <div class="tech-grid three-col">
                 <div class="tech-item">
                   <span class="tech-label">Upper</span>
-                  <span class="tech-value up">¥{{ technical.boll.upper.toFixed(2) }}</span>
+                  <span class="tech-value up">¥{{ getLatestValue(technical.boll.upper).toFixed(2) }}</span>
                 </div>
                 <div class="tech-item">
                   <span class="tech-label">Middle</span>
-                  <span class="tech-value">¥{{ technical.boll.mid.toFixed(2) }}</span>
+                  <span class="tech-value">¥{{ getLatestValue(technical.boll.mid).toFixed(2) }}</span>
                 </div>
                 <div class="tech-item">
                   <span class="tech-label">Lower</span>
-                  <span class="tech-value down">¥{{ technical.boll.lower.toFixed(2) }}</span>
+                  <span class="tech-value down">¥{{ getLatestValue(technical.boll.lower).toFixed(2) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <n-divider />
+
+            <div class="tech-section">
+              <h4 class="tech-title">Williams %R</h4>
+              <div class="tech-grid">
+                <div class="tech-item" v-for="wr in technical.wr" :key="'wr'+wr.period">
+                  <span class="tech-label">WR({{ wr.period }})</span>
+                  <span :class="['tech-value', getWRClass(getLatestValue(wr.values))]">{{ getLatestValue(wr.values).toFixed(2) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <n-divider />
+
+            <div class="tech-section">
+              <h4 class="tech-title">DMI</h4>
+              <div class="tech-grid three-col">
+                <div class="tech-item">
+                  <span class="tech-label">+DI</span>
+                  <span class="tech-value">{{ technical.dmi.plusDI.toFixed(2) }}</span>
+                </div>
+                <div class="tech-item">
+                  <span class="tech-label">-DI</span>
+                  <span class="tech-value">{{ technical.dmi.minusDI.toFixed(2) }}</span>
+                </div>
+                <div class="tech-item">
+                  <span class="tech-label">ADX</span>
+                  <span class="tech-value">{{ technical.dmi.adx.toFixed(2) }}</span>
                 </div>
               </div>
             </div>
@@ -233,7 +301,9 @@
             v-if="technical"
             :price-data="technical.recentPrices"
             :ma-data="technical.ma"
-            height="350px"
+            :rsi-data="technical.rsi"
+            :kdj-data="technical.kdj"
+            height="550px"
           />
         </template>
       </n-card>
@@ -264,7 +334,7 @@ import {
   NDivider, NIcon
 } from 'naive-ui'
 import { stockApi, type StockAnalysis, type StockQuote, type TechnicalAnalysis } from '../api'
-import { IconWallet, IconTrend, IconClock, IconChart, IconHome, IconStar } from '../components/icons'
+import { IconWallet, IconTrend, IconClock, IconChart, IconHome, IconStar, IconRobot } from '../components/icons'
 import { formatVolume, formatAmount } from '../utils/format'
 import KLineChart from '../components/KLineChart.vue'
 
@@ -273,6 +343,12 @@ const router = useRouter()
 
 const stockCode = ref(route.params.code as string)
 const loading = ref(false)
+const showAIAnalysis = ref(false)
+
+const scrollToTechnical = () => {
+  document.getElementById('technical-section')?.scrollIntoView({ behavior: 'smooth' })
+}
+
 const error = ref('')
 const hasPosition = ref(true)
 const analysis = ref<StockAnalysis | null>(null)
@@ -280,6 +356,11 @@ const quote = ref<StockQuote | null>(null)
 const technical = ref<TechnicalAnalysis | null>(null)
 const techLoading = ref(false)
 const techError = ref('')
+
+const getLatestValue = (values: number[]): number => {
+  if (!values || values.length === 0) return 0
+  return values[values.length - 1] ?? 0
+}
 
 const getRSIClass = (rsi: number): string => {
   if (rsi > 70) return 'overbought'
@@ -290,6 +371,12 @@ const getRSIClass = (rsi: number): string => {
 const getKDJClass = (value: number): string => {
   if (value > 80) return 'overbought'
   if (value < 20) return 'oversold'
+  return ''
+}
+
+const getWRClass = (wr: number): string => {
+  if (wr > -20) return 'overbought'
+  if (wr < -80) return 'oversold'
   return ''
 }
 
@@ -340,6 +427,64 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.action-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.action-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+.action-icon.ai {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+}
+
+.action-icon.tech {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+}
+
+.action-icon.watch {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff;
+}
+
+.action-icon.share {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #fff;
+}
+
+.action-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
 .analysis {
   width: 100%;
   height: 100%;
@@ -495,7 +640,7 @@ onMounted(() => {
   --n-border-radius: 20px !important;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.05) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
   backdrop-filter: blur(20px);
   transition: all 0.3s ease;
   padding: 0 !important;
@@ -503,6 +648,31 @@ onMounted(() => {
   position: relative !important;
   overflow: visible !important;
   display: block !important;
+}
+
+.analysis-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 21px;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.3),
+    rgba(139, 92, 246, 0.1) 40%,
+    rgba(139, 92, 246, 0.1) 60%,
+    rgba(99, 102, 241, 0.3)
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.analysis-card:hover::before {
+  opacity: 1;
 }
 
 .analysis-card > * {
@@ -654,8 +824,15 @@ onMounted(() => {
 
 .stats-grid {
   display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.stats-row {
+  display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 .stat-item {
@@ -670,8 +847,9 @@ onMounted(() => {
 }
 
 .stat-item:hover {
-  background: rgba(99, 102, 241, 0.06);
-  border-color: rgba(99, 102, 241, 0.15);
+  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.2);
+  transform: translateY(-2px);
 }
 
 .stat-label {
@@ -693,13 +871,32 @@ onMounted(() => {
   font-weight: 700;
 }
 
+.stat-unit {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 400;
+}
+
+.highlight-card {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.1)) !important;
+  border-color: rgba(99, 102, 241, 0.25) !important;
+}
+
 .profit-section {
   display: flex;
-  justify-content: space-around;
-  padding: 16px 0;
-  background: rgba(255, 255, 255, 0.02);
-  border-radius: 14px;
-  margin-top: 8px;
+  align-items: center;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.05));
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  border-radius: 16px;
+  margin-top: 4px;
+}
+
+.profit-divider {
+  width: 1px;
+  height: 50px;
+  background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.2), transparent);
+  margin: 0 24px;
 }
 
 .profit-item {
@@ -707,34 +904,66 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  padding: 8px 24px;
+  flex: 1;
+}
+
+.profit-item.main {
+  flex: 1.5;
 }
 
 .profit-label {
-  font-size: 13px;
+  font-size: 12px;
   color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
 }
 
 .profit-value {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: bold;
 }
 
+.profit-value.rate {
+  font-size: 20px;
+}
+
 .tech-section {
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.tech-section:last-child {
+  margin-bottom: 0;
 }
 
 .tech-title {
-  margin: 0 0 12px 0;
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.5);
-  font-weight: 500;
+  margin: 0 0 14px 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tech-title::before {
+  content: '';
+  width: 4px;
+  height: 14px;
+  background: linear-gradient(180deg, #6366f1, #8b5cf6);
+  border-radius: 2px;
 }
 
 .tech-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  gap: 10px;
 }
 
 .tech-grid.three-col {
@@ -745,21 +974,21 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 14px 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 14px;
+  padding: 12px 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
   transition: all 0.2s ease;
 }
 
 .tech-item:hover {
-  background: rgba(99, 102, 241, 0.08);
-  border-color: rgba(99, 102, 241, 0.2);
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.25);
   transform: translateY(-2px);
 }
 
 .tech-label {
-  font-size: 11px;
+  font-size: 10px;
   color: rgba(255, 255, 255, 0.4);
   margin-bottom: 6px;
   text-transform: uppercase;
@@ -768,7 +997,7 @@ onMounted(() => {
 }
 
 .tech-value {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: #fff;
 }
@@ -776,16 +1005,16 @@ onMounted(() => {
 .quote-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  gap: 10px;
 }
 
 .quote-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 14px 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 14px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 14px;
   transition: all 0.2s ease;
 }
@@ -793,10 +1022,11 @@ onMounted(() => {
 .quote-item:hover {
   background: rgba(99, 102, 241, 0.08);
   border-color: rgba(99, 102, 241, 0.2);
+  transform: translateY(-2px);
 }
 
 .quote-label {
-  font-size: 11px;
+  font-size: 10px;
   color: rgba(255, 255, 255, 0.4);
   margin-bottom: 6px;
   text-transform: uppercase;
@@ -805,13 +1035,14 @@ onMounted(() => {
 }
 
 .quote-value {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: #fff;
 }
 
 .quote-value.time {
-  font-size: 12px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .up {
@@ -838,7 +1069,7 @@ onMounted(() => {
     padding-bottom: calc(80px + env(safe-area-inset-bottom));
   }
 
-  .stats-grid {
+  .stats-row {
     grid-template-columns: repeat(2, 1fr);
   }
 
@@ -893,13 +1124,13 @@ onMounted(() => {
     padding: 2px 6px;
   }
 
-  .stats-grid {
+  .stats-row {
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
   }
 
   .stat-item {
-    padding: 8px;
+    padding: 10px 8px;
   }
 
   .stat-label {
@@ -907,35 +1138,51 @@ onMounted(() => {
   }
 
   .stat-value {
-    font-size: 12px;
+    font-size: 13px;
+  }
+
+  .stat-unit {
+    font-size: 10px;
   }
 
   .profit-section {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 16px;
-    justify-content: center;
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .profit-divider {
+    height: 40px;
+    margin: 0 16px;
   }
 
   .profit-item {
-    min-width: 100px;
+    gap: 4px;
+  }
+
+  .profit-item.main {
+    flex: 1.2;
   }
 
   .profit-value {
     font-size: 18px;
   }
 
+  .profit-value.rate {
+    font-size: 16px;
+  }
+
   .tech-section {
-    margin-bottom: 4px;
+    margin-bottom: 8px;
+    padding: 12px;
   }
 
   .tech-title {
-    font-size: 12px;
-    margin-bottom: 8px;
+    font-size: 11px;
+    margin-bottom: 10px;
   }
 
   .tech-grid, .tech-grid.three-col {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 6px;
   }
 
@@ -944,40 +1191,32 @@ onMounted(() => {
   }
 
   .tech-label {
-    font-size: 10px;
+    font-size: 9px;
   }
 
   .tech-value {
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .quote-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
   }
 
   .quote-item {
-    padding: 8px;
+    padding: 10px 6px;
   }
 
   .quote-label {
-    font-size: 10px;
+    font-size: 9px;
   }
 
   .quote-value {
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .card-header {
     font-size: 14px;
-  }
-
-  :deep(.n-card__content) {
-    padding: 12px 8px;
-  }
-
-:deep(.n-divider) {
-    margin: 12px 0;
   }
 }
 

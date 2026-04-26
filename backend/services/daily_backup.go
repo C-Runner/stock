@@ -65,13 +65,13 @@ func BackupStockDaily(code string) error {
 	for _, m := range ma {
 		switch m.Period {
 		case 5:
-			ma5 = m.Value
+			ma5 = m.Values[len(m.Values)-1]
 		case 10:
-			ma10 = m.Value
+			ma10 = m.Values[len(m.Values)-1]
 		case 20:
-			ma20 = m.Value
+			ma20 = m.Values[len(m.Values)-1]
 		case 60:
-			ma60 = m.Value
+			ma60 = m.Values[len(m.Values)-1]
 		}
 	}
 
@@ -79,9 +79,9 @@ func BackupStockDaily(code string) error {
 	for _, e := range ema {
 		switch e.Period {
 		case 12:
-			ema12 = e.Value
+			ema12 = e.Values[len(e.Values)-1]
 		case 26:
-			ema26 = e.Value
+			ema26 = e.Values[len(e.Values)-1]
 		}
 	}
 
@@ -89,11 +89,11 @@ func BackupStockDaily(code string) error {
 	for _, r := range rsi {
 		switch r.Period {
 		case 6:
-			rsi6 = r.Value
+			rsi6 = r.Values[len(r.Values)-1]
 		case 12:
-			rsi12 = r.Value
+			rsi12 = r.Values[len(r.Values)-1]
 		case 24:
-			rsi24 = r.Value
+			rsi24 = r.Values[len(r.Values)-1]
 		}
 	}
 
@@ -135,15 +135,15 @@ func BackupStockDaily(code string) error {
 		RSI6:         rsi6,
 		RSI12:        rsi12,
 		RSI24:        rsi24,
-		DIF:          macd.DIF,
-		DEA:          macd.DEA,
-		MACD:         macd.MACD,
-		KDJK:         kdj.K,
-		KDJD:         kdj.D,
-		KDJJ:         kdj.J,
-		BOLLUpper:    boll.Upper,
-		BOLLMid:      boll.Mid,
-		BOLLLower:    boll.Lower,
+		DIF:          macd.DIF[len(macd.DIF)-1],
+		DEA:          macd.DEA[len(macd.DEA)-1],
+		MACD:         macd.MACD[len(macd.MACD)-1],
+		KDJK:         kdj.K[len(kdj.K)-1],
+		KDJD:         kdj.D[len(kdj.D)-1],
+		KDJJ:         kdj.J[len(kdj.J)-1],
+		BOLLUpper:    boll.Upper[len(boll.Upper)-1],
+		BOLLMid:      boll.Mid[len(boll.Mid)-1],
+		BOLLLower:    boll.Lower[len(boll.Lower)-1],
 	}
 
 	// Upsert: update if exists, insert if not
