@@ -1,5 +1,15 @@
 package services
 
+import "math"
+
+// abs returns absolute value
+func abs(x float64) float64 {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
 // calculateMA calculates moving averages as time series
 func calculateMA(closes []float64, periods []int) []MAData {
 	var result []MAData
@@ -495,16 +505,10 @@ func calculateVWAP(klines []KLine) VWAPData {
 	return VWAPData{Values: values}
 }
 
-// sqrt returns square root
+// sqrt returns square root using math.Sqrt
 func sqrt(n float64) float64 {
 	if n <= 0 {
 		return 0
 	}
-	x := n
-	y := (x + 1) / 2
-	for y < x {
-		x = y
-		y = (x + n/x) / 2
-	}
-	return x
+	return math.Sqrt(n)
 }

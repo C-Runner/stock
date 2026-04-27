@@ -56,40 +56,15 @@ onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
 })
 
-// Calculate MA time series from price data
-const calculateMA = (period: number): number[] => {
-  const closes = props.priceData.map(p => p.close)
-  const result: number[] = []
-  for (let i = period - 1; i < closes.length; i++) {
-    let sum = 0
-    for (let j = i - period + 1; j <= i; j++) {
-      sum += closes[j]!
-    }
-    result.push(sum / period)
-  }
-  return result
-}
+// Use backend-provided MA data directly
+const ma5Data = computed(() => props.maData?.find(m => m.period === 5)?.values.slice(-ma20BaseLength.value) ?? [])
+const ma10Data = computed(() => props.maData?.find(m => m.period === 10)?.values.slice(-ma20BaseLength.value) ?? [])
+const ma20BaseLength = computed(() => props.maData?.find(m => m.period === 20)?.values.length ?? 0)
+const ma20Data = computed(() => props.maData?.find(m => m.period === 20)?.values ?? [])
 
-// Calculate EMA time series from price data
-const calculateEMA = (period: number): number[] => {
-  const closes = props.priceData.map(p => p.close)
-  const result: number[] = []
-  const multiplier = 2.0 / (period + 1)
-
-  for (let i = period - 1; i < closes.length; i++) {
-    if (i === period - 1) {
-      let sum = 0
-      for (let j = 0; j <= i; j++) {
-        sum += closes[j]!
-      }
-      result.push(sum / period)
-    } else {
-      const prevEMA = result[result.length - 1]!
-      result.push((closes[i]! - prevEMA) * multiplier + prevEMA)
-    }
-  }
-  return result
-}
+// Use backend-provided EMA data directly
+const ema12Data = computed(() => props.emaData?.find(e => e.period === 12)?.values.slice(-ma20BaseLength.value) ?? [])
+const ema26Data = computed(() => props.emaData?.find(e => e.period === 26)?.values.slice(-ma20BaseLength.value) ?? [])
 
 // Process data for candlestick chart - using aligned data
 const candlestickData = computed(() =>
@@ -109,48 +84,18 @@ const dates = computed(() =>
 // Aligned price data for all charts (from index 19 to match indicator start)
 const alignedPriceData = computed(() => props.priceData.slice(19))
 
-// MA data computed from aligned price data
-const ma5Data = computed(() => calculateMA(5).slice(-ma20Data.value.length))
-const ma10Data = computed(() => calculateMA(10).slice(-ma20Data.value.length))
-const ma20Data = computed(() => calculateMA(20))
-
 // Align dates with indicator data (MA20 starts at index 19)
 const alignedDates = computed(() => {
   const startIdx = 19 // MA20 period - 1
   return dates.value.slice(startIdx)
 })
 
-// EMA data computed from aligned price data
-const ema12Data = computed(() => calculateEMA(12).slice(-ma20Data.value.length))
-const ema26Data = computed(() => calculateEMA(26).slice(-ma20Data.value.length))
-
-// BOLL data computed from aligned price data
-const bollDataComputed = computed(() => {
-  const closes = alignedPriceData.value.map(p => p.close)
-  const upper: number[] = []
-  const mid: number[] = []
-  const lower: number[] = []
-
-  for (let i = 1; i < closes.length; i++) {
-    let sum = 0
-    for (let j = i - 1; j <= i; j++) {
-      sum += closes[j]!
-    }
-    const ma20 = sum / 2
-
-    let variance = 0
-    for (let j = i - 1; j <= i; j++) {
-      const diff = closes[j]! - ma20
-      variance += diff * diff
-    }
-    const stdDev = Math.sqrt(variance / 2)
-
-    upper.push(ma20 + 2 * stdDev)
-    mid.push(ma20)
-    lower.push(ma20 - 2 * stdDev)
-  }
-  return { upper, mid, lower }
-})
+// Use backend-provided BOLL data directly
+const bollDataComputed = computed(() => ({
+  upper: props.bollData?.upper ?? [],
+  mid: props.bollData?.mid ?? [],
+  lower: props.bollData?.lower ?? []
+}))
 
 // RSI data from backend (time series) - slice to match aligned data length
 const rsi6Data = computed(() => props.rsiData?.find(r => r.period === 6)?.values.slice(-ma20Data.value.length) ?? [])

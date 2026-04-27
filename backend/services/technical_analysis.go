@@ -162,6 +162,14 @@ func fetchKLineData(sinaCode string) ([]KLine, error) {
 func parseKLineData(body string) ([]KLine, error) {
 	body = strings.Trim(body, "[]")
 
+	if !strings.Contains(body, "},{") {
+		// Single entry or malformed - try as single entry
+		if strings.Contains(body, "{") && strings.Contains(body, "}") {
+			return parseSingleKLine(body)
+		}
+		return nil, fmt.Errorf("invalid k-line data format")
+	}
+
 	entries := strings.Split(body, "},{")
 	var klines []KLine
 
@@ -201,5 +209,48 @@ func parseKLineData(body string) ([]KLine, error) {
 		}
 	}
 
+	if len(klines) == 0 {
+		return nil, fmt.Errorf("no valid k-line data found")
+	}
+
 	return klines, nil
+}
+
+// parseSingleKLine parses a single k-line entry
+func parseSingleKLine(entry string) ([]KLine, error) {
+	entry = strings.Trim(entry, "{}")
+	entry = strings.ReplaceAll(entry, `"`, ``)
+
+	fields := strings.Split(entry, ",")
+	kline := KLine{}
+
+	for _, field := range fields {
+		parts := strings.Split(field, ":")
+		if len(parts) != 2 {
+			continue
+		}
+		key := strings.Trim(parts[0], " ")
+		value := strings.Trim(parts[1], " ")
+
+		switch key {
+		case "day":
+			kline.Date = value
+		case "open":
+			kline.Open, _ = strconv.ParseFloat(value, 64)
+		case "high":
+			kline.High, _ = strconv.ParseFloat(value, 64)
+		case "low":
+			kline.Low, _ = strconv.ParseFloat(value, 64)
+		case "close":
+			kline.Close, _ = strconv.ParseFloat(value, 64)
+		case "volume":
+			kline.Volume, _ = strconv.ParseInt(value, 10, 64)
+		}
+	}
+
+	if kline.Date == "" {
+		return nil, fmt.Errorf("invalid k-line entry")
+	}
+
+	return []KLine{kline}, nil
 }

@@ -205,23 +205,8 @@ func TencentFinanceAPI(code string) (*models.StockQuote, error) {
 	return parseTencentResponse(string(body), code)
 }
 
-// convertToTencentCode converts stock code to Tencent Finance format
-func convertToTencentCode(code string) string {
-	code = strings.ToLower(code)
-	if strings.HasPrefix(code, "sh") || strings.HasPrefix(code, "sz") {
-		return code
-	}
-	if len(code) == 6 {
-		prefix := code[:3]
-		switch {
-		case prefix >= "600" && prefix <= "603" || prefix == "688":
-			return "sh" + code
-		case prefix >= "000" && prefix <= "003" || prefix >= "200" && prefix <= "299" || prefix >= "300" && prefix <= "399":
-			return "sz" + code
-		}
-	}
-	return "sh" + code
-}
+// convertToTencentCode is an alias for convertToSinaCode (same logic)
+var convertToTencentCode = convertToSinaCode
 
 // parseTencentResponse parses Tencent Finance API response
 func parseTencentResponse(body string, code string) (*models.StockQuote, error) {
@@ -324,11 +309,4 @@ func ValidateWithSecondSource(code string, sinaQuote *models.StockQuote) (*Cross
 	}
 
 	return result, tencentQuote, nil
-}
-
-func abs(x float64) float64 {
-	if x < 0 {
-		return -x
-	}
-	return x
 }

@@ -3,7 +3,7 @@ package services
 import (
 	"fmt"
 	"log"
-	"time"
+	"sync"
 
 	"backend/config"
 	"backend/models"
@@ -164,19 +164,35 @@ func BackupAllWatchlist() error {
 	}
 
 	log.Printf("Starting daily backup for %d watchlist stocks", len(watchlist))
+
+	const maxConcurrent = 5
+	sem := make(chan struct{}, maxConcurrent)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
 	successCount := 0
 	failCount := 0
 
 	for _, item := range watchlist {
-		if err := BackupStockDaily(item.Code); err != nil {
-			log.Printf("Failed to backup %s: %v", item.Code, err)
-			failCount++
-		} else {
-			successCount++
-		}
-		// Rate limit to avoid API restrictions
-		time.Sleep(100 * time.Millisecond)
+		wg.Add(1)
+		go func(code string) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			if err := BackupStockDaily(code); err != nil {
+				log.Printf("Failed to backup %s: %v", code, err)
+				mu.Lock()
+				failCount++
+				mu.Unlock()
+			} else {
+				mu.Lock()
+				successCount++
+				mu.Unlock()
+			}
+		}(item.Code)
 	}
+
+	wg.Wait()
 
 	log.Printf("Daily backup completed: %d succeeded, %d failed", successCount, failCount)
 	if failCount > 0 {
