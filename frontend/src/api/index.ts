@@ -103,6 +103,15 @@ export interface DMIData {
   adx: number
 }
 
+export interface OBVData {
+  values: number[]
+  trend: string
+}
+
+export interface VWAPData {
+  values: number[]
+}
+
 export interface PricePoint {
   date: string
   open: number
@@ -112,17 +121,85 @@ export interface PricePoint {
   volume: number
 }
 
+export interface CandlestickPattern {
+  type: string
+  date: string
+  strength: string
+  bullish: boolean
+  meaning: string
+}
+
+export interface TrendPattern {
+  type: string
+  startDate: string
+  endDate: string
+  strength: string
+  bullish: boolean
+  breakout: number
+  meaning: string
+}
+
+export interface PatternAnalysis {
+  candlestickPatterns: CandlestickPattern[]
+  trendPatterns: TrendPattern[]
+}
+
+export interface PriceLevel {
+  price: number
+  strength: string
+  touches: number
+  type: string
+}
+
+export interface TrendLine {
+  slope: number
+  intercept: number
+  startDate: string
+  endDate: string
+  strength: string
+  direction: string
+}
+
+export interface Channel {
+  upperLine: TrendLine
+  lowerLine: TrendLine
+  startDate: string
+  endDate: string
+  strength: string
+}
+
+export interface PriceLevels {
+  resistance: PriceLevel[]
+  support: PriceLevel[]
+  trendLine: TrendLine | null
+  channel: Channel | null
+}
+
+export interface Recommendation {
+  action: string
+  confidence: number
+  reasons: string[]
+  summary: string
+  riskLevel: string
+}
+
 export interface TechnicalAnalysis {
   code: string
   name: string
   ma: MAData[]
   ema: MAData[]
+  wma: MAData[]
   rsi: RSIData[]
   macd: MACDData
   kdj: KDJData
   boll: BOLLData
   wr: WRData[]
   dmi: DMIData
+  obv: OBVData
+  vwap: VWAPData
+  patterns: PatternAnalysis
+  levels: PriceLevels
+  recommendation: Recommendation
   recentPrices: PricePoint[]
 }
 

@@ -346,7 +346,7 @@ const loading = ref(false)
 const showAIAnalysis = ref(false)
 
 const scrollToTechnical = () => {
-  document.getElementById('technical-section')?.scrollIntoView({ behavior: 'smooth' })
+  router.push(`/technical/${stockCode.value}`)
 }
 
 const error = ref('')

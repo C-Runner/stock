@@ -24,7 +24,8 @@
       "Bash(sed -i 's/max-height: calc\\(100vh - 320px\\);/max-height: calc\\(100vh - 280px - 70px - env\\(safe-area-inset-bottom\\)\\);/' Watchlist.vue)",
       "Bash(git reset:*)",
       "Bash(git add:*)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(timeout 5 go run main.go)"
     ]
   }
 }
