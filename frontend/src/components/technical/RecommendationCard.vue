@@ -48,7 +48,11 @@ defineProps<Props>()
 
 <style scoped>
 .recommendation-card {
-  padding: 24px;
+  padding: 20px;
+}
+
+.recommendation-card.hold .n-card__content {
+  background: rgba(245, 158, 11, 0.03) !important;
 }
 
 .recommendation-card.buy {
@@ -57,8 +61,8 @@ defineProps<Props>()
 }
 
 .recommendation-card.hold {
-  background: linear-gradient(145deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.15), rgba(245, 158, 11, 0.05)) !important;
-  border: 1px solid rgba(245, 158, 11, 0.4) !important;
+  background: rgba(245, 158, 11, 0.05) !important;
+  border: 1px solid rgba(245, 158, 11, 0.15) !important;
 }
 
 .recommendation-card.watch {
@@ -69,77 +73,81 @@ defineProps<Props>()
 .recommendation-top {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 20px;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 16px;
 }
 
 .stock-info-section {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  align-items: flex-start;
+  gap: 2px;
 }
 
 .stock-info-section .stock-name {
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 700;
   color: #fff;
 }
 
 .stock-info-section .stock-code {
-  font-size: 14px;
+  font-size: 12px;
   color: rgba(255, 255, 255, 0.5);
 }
 
 .stock-info-section .stock-price {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.8);
-  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .action-section {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
 }
 
 .action-badge-large {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 22px;
+  justify-content: center;
+  font-size: 14px;
   font-weight: 800;
-  padding: 12px 24px;
-  border-radius: 14px;
-  letter-spacing: 2px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  letter-spacing: 1px;
+  min-width: 70px;
 }
 
 .action-badge-large.buy {
   background: linear-gradient(135deg, #10b981, #059669);
   color: #fff;
-  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+  box-shadow: 0 2px 12px rgba(16, 185, 129, 0.3);
 }
 
 .action-badge-large.hold {
   background: linear-gradient(135deg, #f59e0b, #d97706);
   color: #fff;
-  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4);
+  box-shadow: 0 2px 12px rgba(245, 158, 11, 0.3);
 }
 
 .action-badge-large.watch {
   background: linear-gradient(135deg, #ef4444, #dc2626);
   color: #fff;
-  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4);
+  box-shadow: 0 2px 12px rgba(239, 68, 68, 0.3);
 }
 
 .action-icon {
-  font-size: 20px;
+  font-size: 14px;
+  margin-right: 2px;
 }
 
 .confidence-ring {
   position: relative;
-  width: 56px;
-  height: 56px;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
 }
 
 .confidence-ring-svg {
@@ -172,6 +180,7 @@ defineProps<Props>()
   font-size: 12px;
   font-weight: 700;
   color: #fff;
+  white-space: nowrap;
 }
 
 .risk-indicator {

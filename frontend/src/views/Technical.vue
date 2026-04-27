@@ -7,9 +7,6 @@
 
     <n-space vertical :size="12" class="content" :style="{ width: '100%' }">
       <div class="page-header">
-        <div class="back-btn" @click="router.back()">
-          <n-icon size="24"><IconArrowBack /></n-icon>
-        </div>
         <div class="header-info">
           <h1 class="page-title">Technical Analysis</h1>
         </div>
@@ -51,17 +48,16 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import {
   NCard, NSpace, NSpin, NAlert, NIcon
 } from 'naive-ui'
 import { stockApi, type TechnicalAnalysis, type StockQuote } from '../api'
-import { IconChart, IconArrowBack } from '../components/icons'
+import { IconChart } from '../components/icons'
 import KLineChart from '../components/KLineChart.vue'
 import { RecommendationCard, PeriodAnalysis, LevelsSection, PatternSection } from '../components/technical'
 
 const route = useRoute()
-const router = useRouter()
 
 const stockCode = ref(route.params.code as string)
 const loading = ref(false)
@@ -158,25 +154,6 @@ onMounted(() => {
   align-items: center;
   gap: 16px;
   margin-bottom: 8px;
-}
-
-.back-btn {
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.back-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  transform: translateX(-2px);
 }
 
 .header-info {
