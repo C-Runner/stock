@@ -113,6 +113,7 @@ func main() {
 		protected.GET("/watchlist", handlers.GetWatchlist)
 		protected.POST("/watchlist", handlers.AddToWatchlist)
 		protected.DELETE("/watchlist/:code", handlers.RemoveFromWatchlist)
+		protected.POST("/watchlist/fetch-history", handlers.FetchWatchlistHistory)
 
 		protected.GET("/stocks/search", handlers.SearchStocks)
 	}

@@ -225,3 +225,253 @@ func GetDailySnapshot(code string, date string) (*models.StockDailySnapshot, err
 	}
 	return &snapshot, nil
 }
+
+// FetchHistoricalDataForWatchlist fetches up to 180 days of historical data
+// for all stocks in a user's watchlist, using two-source validation.
+// Only fetches dates not already in the database.
+func FetchHistoricalDataForWatchlist(userID string) (int, int, error) {
+	var watchlist []models.UserWatchlist
+	if err := config.DB.Where("user_id = ?", userID).Find(&watchlist).Error; err != nil {
+		return 0, 0, fmt.Errorf("failed to get watchlist: %w", err)
+	}
+
+	if len(watchlist) == 0 {
+		return 0, 0, nil
+	}
+
+	log.Printf("Starting historical data fetch for %d watchlist stocks (user: %s)", len(watchlist), userID)
+
+	const maxConcurrent = 5
+	const maxDays = 180
+	const tolerance = 0.01 // 1% cross-validation tolerance
+
+	sem := make(chan struct{}, maxConcurrent)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	totalNew := 0
+	totalSkipped := 0
+	totalFailed := 0
+
+	for _, item := range watchlist {
+		wg.Add(1)
+		go func(code string) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			inserted, skipped, err := fetchAndSaveHistoricalForStock(code, maxDays, tolerance)
+			mu.Lock()
+			if err != nil {
+				log.Printf("Failed to fetch historical data for %s: %v", code, err)
+				totalFailed++
+			} else {
+				log.Printf("Fetched %d new days for %s (%d skipped, %d failed total)", inserted, code, skipped, totalFailed)
+				totalNew += inserted
+				totalSkipped += skipped
+			}
+			mu.Unlock()
+		}(item.Code)
+	}
+
+	wg.Wait()
+
+	log.Printf("Historical fetch completed: %d new records, %d skipped (already exist), %d stocks failed", totalNew, totalSkipped, totalFailed)
+	return totalNew, totalFailed, nil
+}
+
+// fetchAndSaveHistoricalForStock fetches historical K-line data for a single stock
+// and saves new dates to the database after cross-validation.
+func fetchAndSaveHistoricalForStock(code string, maxDays int, tolerance float64) (inserted int, skipped int, err error) {
+	sinaCode := convertToSinaCode(code)
+
+	// Get existing dates in DB for this stock
+	existingDates := make(map[string]bool)
+	var existing []models.StockDailySnapshot
+	if err := config.DB.Select("date").Where("code = ?", code).Find(&existing).Error; err != nil {
+		return 0, 0, fmt.Errorf("failed to get existing dates: %w", err)
+	}
+	for _, s := range existing {
+		existingDates[s.Date] = true
+	}
+
+	// Fetch from primary source (Sina)
+	sinaKlines, err := fetchKLineData(sinaCode)
+	if err != nil {
+		return 0, 0, fmt.Errorf("Sina fetch failed: %w", err)
+	}
+
+	// Fetch from secondary source (Tencent)
+	tencentKlines, err := fetchTencentKLineData(sinaCode)
+	if err != nil {
+		log.Printf("Warning: Tencent fetch failed for %s: %v", code, err)
+		tencentKlines = nil
+	}
+
+	// Cross-validate
+	var validDates map[string]bool
+	if len(tencentKlines) > 0 {
+		validDates = CrossValidateKLines(sinaKlines, tencentKlines, tolerance)
+	} else {
+		// No Tencent data - use all Sina dates with data
+		validDates = make(map[string]bool)
+		for _, k := range sinaKlines {
+			validDates[k.Date] = true
+		}
+	}
+
+	// Get stock name
+	stockName := code
+	if quote, err := SinaFinanceAPI(code); err == nil && quote.Name != "" {
+		stockName = quote.Name
+	}
+
+	// Process dates from Sina (primary source)
+	// Need at least 60 data points for indicators to be meaningful
+	minDataPoints := 60
+	if len(sinaKlines) < minDataPoints {
+		return 0, 0, fmt.Errorf("insufficient k-line data: got %d, need at least %d", len(sinaKlines), minDataPoints)
+	}
+
+	for i, kline := range sinaKlines {
+		// Check date limit
+		if i >= maxDays {
+			break
+		}
+
+		// Skip if already exists
+		if existingDates[kline.Date] {
+			skipped++
+			continue
+		}
+
+		// Skip if not validated (when Tencent data exists)
+		if validDates != nil {
+			if ok, exists := validDates[kline.Date]; !exists || !ok {
+				log.Printf("Skipping %s on %s: cross-validation failed or no Tencent data", code, kline.Date)
+				skipped++
+				continue
+			}
+		}
+
+		// Build historical data using all prior klines for indicator calculation
+		klinesForCalc := sinaKlines[:i+1]
+		closes := make([]float64, len(klinesForCalc))
+		for j, k := range klinesForCalc {
+			closes[j] = k.Close
+		}
+
+		// Skip if not enough data for indicator calculations
+		if len(closes) < minDataPoints {
+			skipped++
+			continue
+		}
+
+		ma := calculateMA(closes, []int{5, 10, 20, 60})
+		ema := calculateEMA(closes, []int{12, 26})
+		rsi := calculateRSI(closes, []int{6, 12, 24})
+		macd := calculateMACD(closes)
+		kdj := calculateKDJ(klinesForCalc)
+		boll := calculateBOLL(closes)
+
+		// Get latest indicator values
+		ma5, ma10, ma20, ma60 := getLatestMA(ma)
+		ema12, ema26 := getLatestEMA(ema)
+		rsi6, rsi12, rsi24 := getLatestRSI(rsi)
+
+		snapshot := models.StockDailySnapshot{
+			Code:         code,
+			Date:         kline.Date,
+			Name:         stockName,
+			Open:         kline.Open,
+			High:         kline.High,
+			Low:          kline.Low,
+			Close:        kline.Close,
+			Volume:       kline.Volume,
+			Amount:       kline.Amount,
+			TurnoverRate: 0,
+			MA5:          ma5,
+			MA10:         ma10,
+			MA20:         ma20,
+			MA60:         ma60,
+			EMA12:        ema12,
+			EMA26:        ema26,
+			RSI6:         rsi6,
+			RSI12:        rsi12,
+			RSI24:        rsi24,
+			DIF:          macd.DIF[len(macd.DIF)-1],
+			DEA:          macd.DEA[len(macd.DEA)-1],
+			MACD:         macd.MACD[len(macd.MACD)-1],
+			KDJK:         kdj.K[len(kdj.K)-1],
+			KDJD:         kdj.D[len(kdj.D)-1],
+			KDJJ:         kdj.J[len(kdj.J)-1],
+			BOLLUpper:    boll.Upper[len(boll.Upper)-1],
+			BOLLMid:      boll.Mid[len(boll.Mid)-1],
+			BOLLLower:    boll.Lower[len(boll.Lower)-1],
+		}
+
+		if err := config.DB.Save(&snapshot).Error; err != nil {
+			log.Printf("Failed to save snapshot for %s on %s: %v", code, kline.Date, err)
+			continue
+		}
+		inserted++
+	}
+
+	return inserted, skipped, nil
+}
+
+// getLatestMA extracts the latest MA values from MAData slice
+func getLatestMA(ma []MAData) (ma5, ma10, ma20, ma60 float64) {
+	for _, m := range ma {
+		if len(m.Values) == 0 {
+			continue
+		}
+		val := m.Values[len(m.Values)-1]
+		switch m.Period {
+		case 5:
+			ma5 = val
+		case 10:
+			ma10 = val
+		case 20:
+			ma20 = val
+		case 60:
+			ma60 = val
+		}
+	}
+	return
+}
+
+// getLatestEMA extracts the latest EMA values from MAData slice
+func getLatestEMA(ema []MAData) (ema12, ema26 float64) {
+	for _, e := range ema {
+		if len(e.Values) == 0 {
+			continue
+		}
+		val := e.Values[len(e.Values)-1]
+		switch e.Period {
+		case 12:
+			ema12 = val
+		case 26:
+			ema26 = val
+		}
+	}
+	return
+}
+
+// getLatestRSI extracts the latest RSI values from RSIData slice
+func getLatestRSI(rsi []RSIData) (rsi6, rsi12, rsi24 float64) {
+	for _, r := range rsi {
+		if len(r.Values) == 0 {
+			continue
+		}
+		val := r.Values[len(r.Values)-1]
+		switch r.Period {
+		case 6:
+			rsi6 = val
+		case 12:
+			rsi12 = val
+		case 24:
+			rsi24 = val
+		}
+	}
+	return
+}

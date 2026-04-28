@@ -364,7 +364,9 @@ export const watchlistApi = {
   addToWatchlist: (code: string, name: string) =>
     api.post<WatchlistItem>('/api/watchlist', { code, name }),
   removeFromWatchlist: (code: string) =>
-    api.delete<{ message: string }>(`/api/watchlist/${code}`)
+    api.delete<{ message: string }>(`/api/watchlist/${code}`),
+  fetchHistory: () =>
+    api.post<{ newRecords: number; failed: number; message: string }>('/api/watchlist/fetch-history', {})
 }
 
 export const backupApi = {

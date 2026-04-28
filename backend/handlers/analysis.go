@@ -108,3 +108,20 @@ func GetTechnicalAnalysis(c *gin.Context) {
 	c.JSON(http.StatusOK, analysis)
 }
 
+// FetchWatchlistHistory triggers historical data fetch for user's watchlist
+func FetchWatchlistHistory(c *gin.Context) {
+	userID := getUserID(c)
+
+	newRecords, failedCount, err := services.FetchHistoricalDataForWatchlist(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"newRecords": newRecords,
+		"failed":     failedCount,
+		"message":    "Historical data fetch completed",
+	})
+}
+

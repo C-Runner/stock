@@ -6,7 +6,7 @@ import {
   NSwitch, NSpin, NEmpty, NButtonGroup
 } from 'naive-ui'
 import { watchlistApi, stockApi, backupApi, type WatchlistItem, type StockQuote } from '../api'
-import { IconRefresh, IconDelete, IconHome, IconPlus, IconBackup } from '../components/icons'
+import { IconRefresh, IconDelete, IconHome, IconPlus, IconBackup, IconCloudDownload } from '../components/icons'
 import StockSearch from '../components/StockSearch.vue'
 
 const router = useRouter()
@@ -16,7 +16,9 @@ const quotes = ref<Map<string, StockQuote>>(new Map())
 const loading = ref(false)
 const refreshing = ref(false)
 const backingUp = ref(false)
+const backingUpHistory = ref(false)
 const backupStatus = ref('')
+const historyStatus = ref('')
 
 const autoRefresh = ref(true)
 const refreshInterval = ref(30)
@@ -118,6 +120,27 @@ const handleBackup = async () => {
   }
 }
 
+const handleFetchHistory = async () => {
+  if (backingUpHistory.value) return
+  backingUpHistory.value = true
+  historyStatus.value = 'Fetching historical data...'
+  try {
+    const result = await watchlistApi.fetchHistory()
+    historyStatus.value = `Fetched ${result.newRecords} records`
+    setTimeout(() => {
+      historyStatus.value = ''
+    }, 5000)
+  } catch (error) {
+    console.error(error)
+    historyStatus.value = 'Fetch failed'
+    setTimeout(() => {
+      historyStatus.value = ''
+    }, 3000)
+  } finally {
+    backingUpHistory.value = false
+  }
+}
+
 const stopAutoRefresh = () => {
   if (refreshTimer.value) {
     clearInterval(refreshTimer.value)
@@ -195,6 +218,13 @@ onUnmounted(() => stopAutoRefresh())
         </div>
       </div>
       <div class="header-right">
+        <n-button @click="handleFetchHistory" class="history-btn" :class="{ 'is-backing-up': backingUpHistory }" title="Fetch 180 days historical data">
+          <template #icon>
+            <n-icon>
+              <IconCloudDownload />
+            </n-icon>
+          </template>
+        </n-button>
         <n-button @click="handleBackup" class="backup-btn" :class="{ 'is-backing-up': backingUp }">
           <template #icon>
             <n-icon>
@@ -241,6 +271,9 @@ onUnmounted(() => stopAutoRefresh())
       </div>
       <div class="backup-status" v-if="backupStatus">
         {{ backupStatus }}
+      </div>
+      <div class="history-status" v-if="historyStatus">
+        {{ historyStatus }}
       </div>
     </div>
 
@@ -454,12 +487,45 @@ onUnmounted(() => stopAutoRefresh())
   opacity: 1;
 }
 
+.history-btn {
+  background: rgba(99, 102, 241, 0.15) !important;
+  border: 1px solid rgba(99, 102, 241, 0.3) !important;
+  transition: all 0.2s ease;
+}
+
+.history-btn:hover:not(.is-backing-up) {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+  border-color: transparent !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+}
+
+.history-btn.is-backing-up {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+  border-color: transparent !important;
+  transform: none;
+  box-shadow: none;
+}
+
+.history-btn.is-backing-up .n-icon {
+  opacity: 1;
+}
+
 .backup-status {
   color: #10b981;
   font-size: 11px;
   padding: 4px 8px;
   background: rgba(16, 185, 129, 0.1);
   border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 6px;
+}
+
+.history-status {
+  color: #6366f1;
+  font-size: 11px;
+  padding: 4px 8px;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.2);
   border-radius: 6px;
 }
 
