@@ -85,7 +85,53 @@ func CreateStock(c *gin.Context) {
 		return
 	}
 
+	// Auto-add to watchlist if not already present
+	var existingWL models.UserWatchlist
+	if err := config.DB.Where("code = ? AND user_id = ?", req.Code, userID).First(&existingWL).Error; err != nil {
+		// Not in watchlist, add it
+		wlItem := models.UserWatchlist{
+			UserID:  userID,
+			Code:    req.Code,
+			AddedAt: time.Now(),
+		}
+		config.DB.Create(&wlItem)
+	}
+
 	c.JSON(http.StatusCreated, stock)
+}
+
+func UpdateStock(c *gin.Context) {
+	userID := getUserID(c)
+	code := c.Param("code")
+	if code == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Stock code is required"})
+		return
+	}
+
+	var req models.StockRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var stock models.Stock
+	if err := config.DB.Where("code = ? AND user_id = ?", code, userID).First(&stock).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Stock not found"})
+		return
+	}
+
+	stock.Name = req.Name
+	stock.CurrentPrice = req.CurrentPrice
+	stock.Quantity = req.Quantity
+	stock.BuyPrice = req.BuyPrice
+	stock.UpdatedAt = time.Now()
+
+	if err := config.DB.Save(&stock).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, stock)
 }
 
 func DeleteStock(c *gin.Context) {

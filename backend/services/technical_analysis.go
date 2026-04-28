@@ -101,6 +101,11 @@ func GetTechnicalAnalysis(code string) (*TechnicalAnalysis, error) {
 	return analysis, nil
 }
 
+// FetchKLineData fetches historical k-line data from Sina (exported)
+func FetchKLineData(sinaCode string) ([]KLine, error) {
+	return fetchKLineData(sinaCode)
+}
+
 // filterKLinesByDays filters klines to only include data from the last n days
 func filterKLinesByDays(klines []KLine, days int) []KLine {
 	if len(klines) == 0 || days <= 0 {

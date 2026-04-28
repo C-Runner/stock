@@ -9,6 +9,7 @@
       <div class="page-header">
         <div class="header-info">
           <h1 class="page-title">Technical Analysis</h1>
+          <p class="subtitle" v-if="quote">{{ quote.name }} ({{ stockCode }})</p>
         </div>
       </div>
 
@@ -47,8 +48,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import {
   NCard, NSpace, NSpin, NAlert, NIcon
 } from 'naive-ui'
@@ -58,6 +59,7 @@ import KLineChart from '../components/KLineChart.vue'
 import { RecommendationCard, PeriodAnalysis, LevelsSection, PatternSection } from '../components/technical'
 
 const route = useRoute()
+const router = useRouter()
 
 const stockCode = ref(route.params.code as string)
 const loading = ref(false)
@@ -82,8 +84,31 @@ const fetchData = async () => {
   }
 }
 
+let touchStartX = 0
+
+const handleTouchStart = (e: TouchEvent) => {
+  if (e.touches.length > 0) {
+    touchStartX = e.touches[0]?.clientX ?? 0
+  }
+}
+
+const handleTouchEnd = (e: TouchEvent) => {
+  const touchEndX = e.changedTouches[0]?.clientX ?? 0
+  const swipeDistance = touchEndX - touchStartX
+  if (touchStartX < 50 && swipeDistance > 80) {
+    router.back()
+  }
+}
+
 onMounted(() => {
   fetchData()
+  document.addEventListener('touchstart', handleTouchStart, { passive: true })
+  document.addEventListener('touchend', handleTouchEnd, { passive: true })
+})
+
+onUnmounted(() => {
+  document.removeEventListener('touchstart', handleTouchStart)
+  document.removeEventListener('touchend', handleTouchEnd)
 })
 </script>
 
@@ -159,6 +184,13 @@ onMounted(() => {
 .header-info {
   display: flex;
   flex-direction: column;
+  gap: 4px;
+}
+
+.header-info .subtitle {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
 }
 
 .page-title {

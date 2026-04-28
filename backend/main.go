@@ -28,7 +28,7 @@ func main() {
 		log.Printf("Warning: Failed to connect to PostgreSQL: %v", err)
 	} else {
 		defer config.DisconnectPostgres()
-		config.DB.AutoMigrate(&models.User{}, &models.Stock{}, &models.WatchlistItem{}, &models.UserWatchlist{}, &models.StockDailySnapshot{})
+		config.DB.AutoMigrate(&models.User{}, &models.Stock{}, &models.WatchlistItem{}, &models.UserWatchlist{}, &models.StockDailySnapshot{}, &models.AISettings{})
 		if err := config.MigrateDB(); err != nil {
 			log.Printf("Warning: Migration failed: %v", err)
 		}
@@ -100,6 +100,7 @@ func main() {
 		protected.GET("/api/user", handlers.GetCurrentUser)
 		protected.GET("/stocks", handlers.GetStocks)
 		protected.POST("/stocks", handlers.CreateStock)
+		protected.PUT("/stocks/:code", handlers.UpdateStock)
 		protected.DELETE("/stocks/:code", handlers.DeleteStock)
 
 		protected.GET("/stocks/quote/:code", handlers.GetStockQuote)
@@ -116,6 +117,12 @@ func main() {
 		protected.POST("/watchlist/fetch-history", handlers.FetchWatchlistHistory)
 
 		protected.GET("/stocks/search", handlers.SearchStocks)
+
+		// AI Analysis
+		protected.GET("/stocks/ai-analysis/:code", handlers.GetAIAnalysis)
+		protected.GET("/settings/ai", handlers.GetAISettings)
+		protected.PUT("/settings/ai", handlers.UpdateAISettings)
+		protected.POST("/settings/ai/test", handlers.TestAISettings)
 	}
 
 	r.NoRoute(handlers.NotFound)

@@ -49,6 +49,11 @@ func SinaFinanceAPI(code string) (*models.StockQuote, error) {
 	return parseSinaResponse(string(body), code)
 }
 
+// ConvertToSinaCode converts stock code to Sina Finance format (exported)
+func ConvertToSinaCode(code string) string {
+	return convertToSinaCode(code)
+}
+
 // convertToSinaCode converts stock code to Sina Finance format
 func convertToSinaCode(code string) string {
 	code = strings.ToLower(code)

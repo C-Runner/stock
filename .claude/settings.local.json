@@ -25,7 +25,9 @@
       "Bash(git reset:*)",
       "Bash(git add:*)",
       "Bash(git commit *)",
-      "Bash(timeout 5 go run main.go)"
+      "Bash(timeout 5 go run main.go)",
+      "Bash(curl -s http://localhost:8080/api/login -H \"Content-Type: application/json\" -d '{\"username\":\"admin\",\"password\":\"admin123\"}')",
+      "WebFetch(domain:platform.minimaxi.com)"
     ]
   }
 }

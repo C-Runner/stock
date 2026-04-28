@@ -5,14 +5,15 @@
       <div class="gradient-orb orb-2"></div>
     </div>
 
+    <div class="page-header">
+      <div class="header-info">
+        <h1 class="page-title">Stock Analysis</h1>
+        <p class="subtitle" v-if="quote">{{ quote.name }} ({{ stockCode }})</p>
+      </div>
+    </div>
+
     <n-space vertical :size="12" class="content" :style="{ width: '100%' }">
-      <div class="stock-header">
-        <div class="stock-info" v-if="quote">
-          <div class="stock-text">
-            <h2 class="stock-name">{{ quote.name }}</h2>
-            <span class="stock-code">{{ stockCode }}</span>
-          </div>
-        </div>
+      <div class="stock-header" v-if="quote">
         <div class="stock-price" v-if="quote">
           <span class="price">¥{{ quote.current.toFixed(2) }}</span>
           <span :class="['change', quote.current > quote.prevClose ? 'up' : 'down']">
@@ -29,7 +30,7 @@
           </div>
         </template>
         <div class="quick-actions">
-          <div class="action-item" @click="showAIAnalysis = true">
+          <div class="action-item" @click="router.push(`/ai-analysis/${stockCode}`)">
             <div class="action-icon ai">
               <n-icon size="24"><IconRobot /></n-icon>
             </div>
@@ -343,7 +344,6 @@ const router = useRouter()
 
 const stockCode = ref(route.params.code as string)
 const loading = ref(false)
-const showAIAnalysis = ref(false)
 
 const scrollToTechnical = () => {
   router.push(`/technical/${stockCode.value}`)
@@ -552,6 +552,35 @@ onMounted(() => {
   margin-bottom: 0 !important;
 }
 
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: -0.5px;
+}
+
+.subtitle {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+}
+
 .stock-header {
   display: flex;
   align-items: center;
@@ -563,6 +592,7 @@ onMounted(() => {
   backdrop-filter: blur(20px);
   color: white;
   transition: all 0.3s ease;
+  flex: 0 0 auto;
 }
 
 .stock-header:hover {

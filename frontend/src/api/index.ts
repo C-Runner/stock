@@ -312,6 +312,33 @@ export const api = {
     }
   },
 
+  async put<T>(path: string, data: unknown): Promise<T> {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 10000)
+    try {
+      const response = await fetch(`${API_BASE_URL}${path}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data),
+        signal: controller.signal
+      })
+      clearTimeout(timeout)
+      if (response.status === 401) {
+        localStorage.removeItem('token')
+        localStorage.removeItem('tokenExpiry')
+        window.location.href = '/login'
+        throw new Error('Unauthorized')
+      }
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`)
+      }
+      return response.json()
+    } catch (e) {
+      clearTimeout(timeout)
+      throw e
+    }
+  },
+
   async delete<T>(path: string): Promise<T> {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 10000)
@@ -352,6 +379,7 @@ export const authApi = {
 export const stockApi = {
   getStocks: () => api.get<Stock[]>('/api/stocks'),
   createStock: (data: StockRequest) => api.post<Stock>('/api/stocks', data),
+  updateStock: (code: string, data: StockRequest) => api.put<Stock>(`/api/stocks/${code}`, data),
   deleteStock: (code: string) => api.delete<{ message: string }>(`/api/stocks/${code}`),
   getQuote: (code: string) => api.get<StockQuote>(`/api/stocks/quote/${code}`),
   getAnalysis: (code: string) => api.get<StockAnalysisResponse>(`/api/stocks/analysis/${code}`),
@@ -381,4 +409,96 @@ export const backupApi = {
   // Get specific date snapshot
   getDailySnapshot: (code: string, date: string) =>
     api.get<StockDailySnapshot>(`/api/stocks/daily/${code}/${date}`)
+}
+
+// AI Analysis types
+export interface DimensionScore {
+  score: number
+  trend: 'improving' | 'stable' | 'declining'
+  summary: string
+  factors: string[]
+}
+
+export interface Scores {
+  technical: DimensionScore
+  fundamental: DimensionScore
+  moneyFlow: DimensionScore
+  newsSentiment: DimensionScore
+  compositeScore: number
+  anxietyIndex: number
+  attentionLevel: 'high' | 'medium' | 'low'
+}
+
+export interface Highlight {
+  title: string
+  context: string
+}
+
+export interface Risk {
+  title: string
+  context: string
+}
+
+export interface KeyFindings {
+  highlights: Highlight[]
+  risks: Risk[]
+}
+
+export interface SimilarPattern {
+  patternId: string
+  startDate: string
+  endDate: string
+  similarity: number
+  priceChange: number
+  next5DayWinRate: number
+  next20DayWinRate: number
+}
+
+export interface InstitutionalSentiment {
+  period: string
+  totalReports: number
+  buyRatio: number
+  holdRatio: number
+  sellRatio: number
+  ratioChange: 'improving' | 'stable' | 'deteriorating'
+  consensusTarget: number
+  consensusRating: 'buy' | 'hold' | 'sell'
+}
+
+export interface AIAnalysisReport {
+  code: string
+  name: string
+  generatedAt: string
+  cached: boolean
+  fromCache: boolean
+  scores: Scores
+  keyFindings: KeyFindings
+  similarPatterns: SimilarPattern[]
+  institutionalSentiment: InstitutionalSentiment
+}
+
+export const aiApi = {
+  getAnalysis: (code: string) => api.get<AIAnalysisReport>(`/api/stocks/ai-analysis/${code}`)
+}
+
+// AI Settings types
+export interface AISettingsResponse {
+  apiKey: string
+  apiUrl: string
+  model: string
+  enabled: boolean
+  hasApiKey: boolean
+}
+
+export interface AISettingsRequest {
+  apiKey?: string
+  apiUrl: string
+  model: string
+  enabled: boolean
+}
+
+export const settingsApi = {
+  getAISettings: () => api.get<AISettingsResponse>('/api/settings/ai'),
+  updateAISettings: (settings: AISettingsRequest) => api.put<AISettingsResponse>('/api/settings/ai', settings),
+  testAISettings: () => api.post<{ success: boolean; error?: string; message?: string }>('/api/settings/ai/test', {})
 }

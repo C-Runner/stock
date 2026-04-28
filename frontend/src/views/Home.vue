@@ -14,6 +14,13 @@
         </div>
       </div>
       <div class="header-right">
+        <button class="settings-btn" @click="goToSettings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+          </svg>
+          <span>Settings</span>
+        </button>
         <button class="logout-btn" @click="handleLogout">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
@@ -122,6 +129,11 @@
               <div class="cell-item">{{ stock.quantity.toLocaleString() }}</div>
               <div class="cell-item">¥{{ (stock.currentPrice * stock.quantity).toFixed(2) }}</div>
               <div class="action-cell">
+                <n-button text @click.stop="showEditModal(stock)" class="edit-btn">
+                  <template #icon>
+                    <n-icon><IconEdit /></n-icon>
+                  </template>
+                </n-button>
                 <n-button text @click.stop="showDeletePopup(stock.code, stock.name)" class="delete-btn">
                   <template #icon>
                     <n-icon><IconDelete /></n-icon>
@@ -252,6 +264,70 @@
         </div>
       </template>
     </n-modal>
+
+    <n-modal
+      v-model:show="showEditStockModal"
+      preset="card"
+      class="add-stock-modal"
+      :style="{
+        '--n-color': 'rgba(20, 19, 60, 0.7)',
+        '--n-color-modal': 'rgba(20, 19, 60, 0.7)',
+        background: 'rgba(20, 19, 60, 0.7)',
+        backdropFilter: 'blur(24px)'
+      }"
+      :mask="{ style: 'background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px);' }"
+      :icon="() => null"
+      :mask-closable="false"
+    >
+      <template #header>
+        <div class="modal-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="modal-icon">
+            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          <span>Edit Stock</span>
+        </div>
+      </template>
+      <div class="modal-body">
+        <n-form :model="editStockForm" class="add-stock-form">
+          <n-form-item label="Stock Code" path="code">
+            <n-input v-model:value="editStockForm.code" disabled />
+          </n-form-item>
+          <n-form-item label="Stock Name" path="name">
+            <n-input v-model:value="editStockForm.name" disabled />
+          </n-form-item>
+          <n-form-item label="Current Price" path="currentPrice">
+            <n-input-number
+              v-model:value="editStockForm.currentPrice"
+              :min="0"
+              :precision="2"
+              style="width: 100%"
+            />
+          </n-form-item>
+          <n-form-item label="Quantity" path="quantity">
+            <n-input-number
+              v-model:value="editStockForm.quantity"
+              :min="0"
+              style="width: 100%"
+            />
+          </n-form-item>
+          <n-form-item label="Buy Price" path="buyPrice">
+            <n-input-number
+              v-model:value="editStockForm.buyPrice"
+              :min="0"
+              :precision="2"
+              style="width: 100%"
+            />
+          </n-form-item>
+        </n-form>
+      </div>
+      <template #action>
+        <div class="modal-footer">
+          <n-button @click="showEditStockModal = false" class="cancel-btn">Cancel</n-button>
+          <n-button type="primary" @click="handleEditStock" :loading="submitting" class="submit-btn">Save Changes</n-button>
+        </div>
+      </template>
+    </n-modal>
   </div>
 </template>
 
@@ -263,7 +339,7 @@ import {
   NInput, NInputNumber, NEmpty, NIcon
 } from 'naive-ui'
 import { stockApi, authApi, type Stock, type StockRequest } from '../api'
-import { IconPlus, IconWallet, IconCoin, IconTrend, IconDataLine, IconRefresh, IconSearch, IconDelete } from '../components/icons'
+import { IconPlus, IconWallet, IconCoin, IconTrend, IconDataLine, IconRefresh, IconSearch, IconDelete, IconEdit } from '../components/icons'
 
 const router = useRouter()
 
@@ -296,10 +372,48 @@ const showPopup = ref(false)
 const selectedStockCode = ref('')
 const selectedStockName = ref('')
 
+const showEditStockModal = ref(false)
+const editStockForm = ref<StockRequest>({
+  code: '',
+  name: '',
+  currentPrice: 0,
+  quantity: 0,
+  buyPrice: 0
+})
+
 const showDeletePopup = (code: string, name: string) => {
   selectedStockCode.value = code
   selectedStockName.value = name
   showPopup.value = true
+}
+
+const showEditModal = (stock: Stock) => {
+  editStockForm.value = {
+    code: stock.code,
+    name: stock.name,
+    currentPrice: stock.currentPrice,
+    quantity: stock.quantity,
+    buyPrice: stock.buyPrice
+  }
+  showEditStockModal.value = true
+}
+
+const handleEditStock = async () => {
+  if (!editStockForm.value.code) return
+  if (!editStockForm.value.currentPrice || editStockForm.value.currentPrice <= 0) return
+  if (!editStockForm.value.quantity || editStockForm.value.quantity <= 0) return
+  if (!editStockForm.value.buyPrice || editStockForm.value.buyPrice <= 0) return
+
+  submitting.value = true
+  try {
+    await stockApi.updateStock(editStockForm.value.code, editStockForm.value)
+    showEditStockModal.value = false
+    await fetchStocks()
+  } catch (error) {
+    console.error(error)
+  } finally {
+    submitting.value = false
+  }
 }
 
 const confirmDelete = async () => {
@@ -312,6 +426,9 @@ const goToAnalysis = (code: string) => {
   router.push({ path: `/analysis/${code}`, query: { from: '/home' } })
 }
 
+const goToSettings = () => {
+  router.push('/settings')
+}
 
 const lookupStock = async () => {
   if (!stockForm.value.code) return
@@ -469,6 +586,31 @@ const handleLogout = async () => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.settings-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.settings-btn:hover {
+  background: rgba(102, 126, 234, 0.15);
+  border-color: rgba(102, 126, 234, 0.3);
+  color: #667eea;
+}
+
+.settings-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 .logout-btn {
@@ -1220,11 +1362,12 @@ const handleLogout = async () => {
 }
 
 .header-action-cell {
-  width: 50px;
-  min-width: 50px;
+  width: 80px;
+  min-width: 80px;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   background: rgba(10, 10, 15, 1);
 }
 
@@ -1293,11 +1436,12 @@ const handleLogout = async () => {
 }
 
 .action-cell {
-  width: 50px;
-  min-width: 50px;
+  width: 80px;
+  min-width: 80px;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
 }
 
 .table-row:hover {
@@ -1310,6 +1454,14 @@ const handleLogout = async () => {
 
 .delete-btn:hover {
   color: #ff6b6b !important;
+}
+
+.edit-btn {
+  color: rgba(99, 102, 241, 0.6) !important;
+}
+
+.edit-btn:hover {
+  color: #6366f1 !important;
 }
 
 .popup-content {

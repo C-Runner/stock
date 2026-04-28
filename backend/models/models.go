@@ -132,3 +132,20 @@ type User struct {
 func (User) TableName() string {
 	return "users"
 }
+
+// AISettings stores AI LLM configuration
+type AISettings struct {
+	ID        uint      `json:"id" gorm:"primaryKey;autoIncrement"`
+	UserID    string    `json:"userId" gorm:"column:user_id;index;size:100"`
+	APIKey    string    `json:"apiKey" gorm:"column:api_key;size:500"`
+	APIURL    string    `json:"apiUrl" gorm:"column:api_url;size:500"`
+	Model     string    `json:"model" gorm:"column:model;size:100"`
+	GroupID   string    `json:"groupId" gorm:"column:group_id;size:100"`
+	Enabled   bool      `json:"enabled" gorm:"column:enabled;default:true"`
+	CreatedAt time.Time `json:"createdAt" gorm:"column:created_at"`
+	UpdatedAt time.Time `json:"updatedAt" gorm:"column:updated_at"`
+}
+
+func (AISettings) TableName() string {
+	return "ai_settings"
+}
