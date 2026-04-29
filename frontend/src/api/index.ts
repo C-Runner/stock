@@ -259,9 +259,9 @@ const getAuthHeaders = () => {
 }
 
 export const api = {
-  async get<T>(path: string): Promise<T> {
+  async get<T>(path: string, timeoutMs = 10000): Promise<T> {
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 10000)
+    const timeout = setTimeout(() => controller.abort(), timeoutMs)
     try {
       const response = await fetch(`${API_BASE_URL}${path}`, {
         method: 'GET',
@@ -285,9 +285,9 @@ export const api = {
     }
   },
 
-  async post<T>(path: string, data: unknown): Promise<T> {
+  async post<T>(path: string, data: unknown, timeoutMs = 10000): Promise<T> {
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 10000)
+    const timeout = setTimeout(() => controller.abort(), timeoutMs)
     try {
       const response = await fetch(`${API_BASE_URL}${path}`, {
         method: 'POST',
@@ -312,9 +312,9 @@ export const api = {
     }
   },
 
-  async put<T>(path: string, data: unknown): Promise<T> {
+  async put<T>(path: string, data: unknown, timeoutMs = 10000): Promise<T> {
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 10000)
+    const timeout = setTimeout(() => controller.abort(), timeoutMs)
     try {
       const response = await fetch(`${API_BASE_URL}${path}`, {
         method: 'PUT',
@@ -339,9 +339,9 @@ export const api = {
     }
   },
 
-  async delete<T>(path: string): Promise<T> {
+  async delete<T>(path: string, timeoutMs = 10000): Promise<T> {
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 10000)
+    const timeout = setTimeout(() => controller.abort(), timeoutMs)
     try {
       const response = await fetch(`${API_BASE_URL}${path}`, {
         method: 'DELETE',
@@ -465,20 +465,45 @@ export interface InstitutionalSentiment {
   consensusRating: 'buy' | 'hold' | 'sell'
 }
 
+export interface ChartAnalysis {
+  trendInterpretation: string
+  supportResistance: string
+  volumeAnalysis: string
+  indicatorSummary: string
+  patternDescription: string
+  momentumAnalysis: string
+}
+
+export interface InvestmentAdvice {
+  overallAdvice: string
+  entryPoints: string[]
+  exitPoints: string[]
+  stopLoss: string
+  riskLevel: 'low' | 'medium' | 'high'
+  timeHorizon: string
+  positionSizing: string
+  riskWarnings: string[]
+}
+
 export interface AIAnalysisReport {
   code: string
   name: string
   generatedAt: string
   cached: boolean
   fromCache: boolean
+  analysisMethod: 'ai' | 'heuristic'
+  rawAnalysis?: string
+  summary: string
   scores: Scores
   keyFindings: KeyFindings
   similarPatterns: SimilarPattern[]
   institutionalSentiment: InstitutionalSentiment
+  chartAnalysis: ChartAnalysis
+  investmentAdvice: InvestmentAdvice
 }
 
 export const aiApi = {
-  getAnalysis: (code: string) => api.get<AIAnalysisReport>(`/api/stocks/ai-analysis/${code}`)
+  getAnalysis: (code: string) => api.get<AIAnalysisReport>(`/api/stocks/ai-analysis/${code}`, 60000)
 }
 
 // AI Settings types
@@ -486,6 +511,7 @@ export interface AISettingsResponse {
   apiKey: string
   apiUrl: string
   model: string
+  groupId: string
   enabled: boolean
   hasApiKey: boolean
 }
@@ -494,11 +520,12 @@ export interface AISettingsRequest {
   apiKey?: string
   apiUrl: string
   model: string
+  groupId?: string
   enabled: boolean
 }
 
 export const settingsApi = {
   getAISettings: () => api.get<AISettingsResponse>('/api/settings/ai'),
   updateAISettings: (settings: AISettingsRequest) => api.put<AISettingsResponse>('/api/settings/ai', settings),
-  testAISettings: () => api.post<{ success: boolean; error?: string; message?: string }>('/api/settings/ai/test', {})
+  testAISettings: () => api.post<{ success: boolean; error?: string; message?: string; aiResponse?: string; model?: string; statusCode?: number; responseTime?: string }>('/api/settings/ai/test', {})
 }

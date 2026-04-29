@@ -62,25 +62,47 @@
           </div>
 
           <div class="form-group">
+            <label for="protocol">Protocol</label>
+            <select id="protocol" v-model="form.protocol">
+              <option value="openai">OpenAI Compatible</option>
+              <option value="anthropic">Anthropic Compatible (Claude)</option>
+            </select>
+            <span class="hint">Select the API protocol your provider supports</span>
+          </div>
+
+          <div class="form-group">
             <label for="apiUrl">API URL</label>
             <input
               type="text"
               id="apiUrl"
               v-model="form.apiUrl"
-              placeholder="https://api.anthropic.com/v1/messages"
+              placeholder="https://api.deepseek.com/chat/completions"
               autocomplete="off"
             />
-            <span class="hint">API endpoint URL for your LLM provider</span>
+            <span class="hint">API endpoint URL - auto-filled based on protocol</span>
           </div>
 
           <div class="form-group">
             <label for="model">Model</label>
             <select id="model" v-model="form.model">
               <option value="MiniMax-M2.7">MiniMax-M2.7</option>
-              <option value="DeepSeek-V4-Pro">DeepSeek-V4-Pro</option>
-              <option value="deepseek-v4-flash">DeepSeek-V4-Flash</option>
+              <option value="MiniMax-M2.7-highspeed">MiniMax-M2.7-highspeed</option>
+              <option value="deepseek-chat">DeepSeek Chat (deepseek-chat)</option>
+              <option value="deepseek-coder">DeepSeek Coder (deepseek-coder)</option>
             </select>
             <span class="hint">Select the AI model to use for analysis</span>
+          </div>
+
+          <div class="form-group">
+            <label for="groupId">Group ID <span class="optional">(Optional)</span></label>
+            <input
+              type="text"
+              id="groupId"
+              v-model="form.groupId"
+              placeholder="MiniMax Group ID"
+              autocomplete="off"
+            />
+            <span class="hint">Required for MiniMax API. Found in your Token Plan settings.</span>
           </div>
 
           <div class="form-group toggle-group">
@@ -152,7 +174,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { NIcon } from 'naive-ui'
 import { settingsApi, type AISettingsResponse, type AISettingsRequest } from '../api'
@@ -168,19 +190,36 @@ const saveError = ref('')
 const testSuccess = ref('')
 const testError = ref('')
 
-const settings = ref<AISettingsResponse>({
+const settings = ref<AISettingsResponse & { protocol?: string }>({
   apiKey: '',
-  apiUrl: 'https://api.minimax.chat/v1/text/chatcompletion_v2',
-  model: 'MiniMax-Text-01',
+  apiUrl: 'https://api.minimaxi.com/anthropic/v1/messages',
+  model: 'MiniMax-M2.7',
+  groupId: '',
+  protocol: 'anthropic',
   enabled: true,
   hasApiKey: false
 })
 
 const form = ref({
   apiKey: '',
-  apiUrl: 'https://api.minimax.chat/v1/text/chatcompletion_v2',
-  model: 'MiniMax-Text-01',
+  apiUrl: 'https://api.minimaxi.com/anthropic/v1/messages',
+  model: 'MiniMax-M2.7',
+  groupId: '',
+  protocol: 'anthropic',
   enabled: true
+})
+
+// Protocol presets
+const protocolUrls = {
+  openai: 'https://api.minimaxi.com/v1',
+  anthropic: 'https://api.minimaxi.com/anthropic/v1/messages'
+}
+
+// Auto-fill URL when protocol changes
+watch(() => form.value.protocol, (newProtocol) => {
+  if (protocolUrls[newProtocol as keyof typeof protocolUrls]) {
+    form.value.apiUrl = protocolUrls[newProtocol as keyof typeof protocolUrls]
+  }
 })
 
 const loadSettings = async () => {
@@ -188,10 +227,21 @@ const loadSettings = async () => {
   try {
     const data = await settingsApi.getAISettings()
     settings.value = data
+
+    // Detect protocol from URL
+    const detectProtocol = (url: string): string => {
+      if (url.includes('anthropic') || url.includes('messages')) {
+        return 'anthropic'
+      }
+      return 'openai'
+    }
+
     form.value = {
       apiKey: '',
       apiUrl: data.apiUrl,
       model: data.model,
+      groupId: data.groupId || '',
+      protocol: detectProtocol(data.apiUrl),
       enabled: data.enabled
     }
   } catch (e: any) {
@@ -213,6 +263,7 @@ const saveSettings = async () => {
     const request: AISettingsRequest = {
       apiUrl: form.value.apiUrl,
       model: form.value.model,
+      groupId: form.value.groupId,
       enabled: form.value.enabled
     }
 
@@ -243,7 +294,7 @@ const testAI = async () => {
   try {
     const result = await settingsApi.testAISettings()
     if (result.success) {
-      testSuccess.value = result.message || 'AI connection successful'
+      testSuccess.value = result.message + (result.aiResponse ? `: "${result.aiResponse}"` : '')
       setTimeout(() => { testSuccess.value = '' }, 5000)
     } else {
       testError.value = result.error || 'AI test failed'
@@ -521,6 +572,12 @@ onMounted(loadSettings)
 .hint {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.4);
+}
+
+.optional {
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 12px;
 }
 
 .current-key {

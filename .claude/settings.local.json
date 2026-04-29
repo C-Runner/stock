@@ -27,7 +27,12 @@
       "Bash(git commit *)",
       "Bash(timeout 5 go run main.go)",
       "Bash(curl -s http://localhost:8080/api/login -H \"Content-Type: application/json\" -d '{\"username\":\"admin\",\"password\":\"admin123\"}')",
-      "WebFetch(domain:platform.minimaxi.com)"
+      "WebFetch(domain:platform.minimaxi.com)",
+      "WebFetch(domain:api-docs.deepseek.com)",
+      "WebFetch(domain:www.minimaxi.com)",
+      "Bash(timeout 30 go run main.go)",
+      "Bash(curl -s -X POST http://localhost:8080/api/login -H \"Content-Type: application/json\" -d '{\"username\":\"admin\",\"password\":\"admin123\"}')",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('chartAnalysis' in d, 'investmentAdvice' in d, 'institutionalSentiment' in d\\)\" pkill -f \"go run main.go\")"
     ]
   }
 }

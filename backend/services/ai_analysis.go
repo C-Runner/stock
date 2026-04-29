@@ -42,24 +42,34 @@ func GetAIAnalysisService() *AIAnalysisService {
 	return aiService
 }
 
-// getAISettings retrieves AI settings from database
-func GetAISettings() *models.AISettings {
+// getAISettings retrieves AI settings from database (for handlers, uses userID)
+func GetAISettings(userID string) *models.AISettings {
 	var settings models.AISettings
-	if err := config.DB.FirstOrCreate(&settings, &models.AISettings{
-		APIKey:  "",
-		APIURL:  "https://api.minimaxi.com/v1/text/chatcompletion",
-		Model:   "MiniMax-Text-01",
-		GroupID: "",
-		Enabled: true,
-	}).Error; err != nil {
-		log.Printf("Failed to get AI settings: %v", err)
-		return nil
+	if err := config.DB.Where("user_id = ?", userID).First(&settings).Error; err != nil {
+		if err.Error() == "record not found" {
+			// Create default settings for user
+			settings = models.AISettings{
+				UserID:  userID,
+				APIKey:  "",
+				APIURL:  "https://api.minimaxi.com/anthropic/v1/messages",
+				Model:   "MiniMax-M2.7",
+				GroupID: "",
+				Enabled: true,
+			}
+			if err := config.DB.Create(&settings).Error; err != nil {
+				log.Printf("Failed to create AI settings for user %s: %v", userID, err)
+				return nil
+			}
+		} else {
+			log.Printf("Failed to get AI settings for user %s: %v", userID, err)
+			return nil
+		}
 	}
 	return &settings
 }
 
 // GetAIAnalysis generates or retrieves cached AI analysis report
-func (s *AIAnalysisService) GetAIAnalysis(input *AIAnalysisInput) (*AIAnalysisReport, error) {
+func (s *AIAnalysisService) GetAIAnalysis(input *AIAnalysisInput, userID string) (*AIAnalysisReport, error) {
 	cacheKey := input.Code
 
 	// Check cache first
@@ -79,7 +89,7 @@ func (s *AIAnalysisService) GetAIAnalysis(input *AIAnalysisInput) (*AIAnalysisRe
 	}
 
 	// Get AI settings from database
-	settings := GetAISettings()
+	settings := GetAISettings(userID)
 
 	// Generate AI analysis
 	var report *AIAnalysisReport
@@ -350,40 +360,35 @@ func (s *AIAnalysisService) getPatternSignals(ta *TechnicalAnalysis) []string {
 // generateWithClaude calls AI API for analysis (supports OpenAI-compatible and Anthropic formats)
 func (s *AIAnalysisService) generateWithClaude(input *AIAnalysisInput, techData map[string]interface{}, apiKey, apiURL, model, groupID string) (*AIAnalysisReport, error) {
 	prompt := s.buildAnalysisPrompt(input, techData)
-	systemPrompt := `You are a professional stock analyst. Generate a structured analysis report in JSON format with exactly this schema:
-{
-  "scores": {
-    "technical": {"score": 0-100, "trend": "improving|stable|declining", "summary": "brief", "factors": ["factor1", "factor2"]},
-    "fundamental": {"score": 0-100, "trend": "improving|stable|declining", "summary": "brief", "factors": ["factor1", "factor2"]},
-    "moneyFlow": {"score": 0-100, "trend": "improving|stable|declining", "summary": "brief", "factors": ["factor1", "factor2"]},
-    "newsSentiment": {"score": 0-100, "trend": "improving|stable|declining", "summary": "brief", "factors": ["factor1", "factor2"]},
-    "compositeScore": 0-100,
-    "anxietyIndex": 0-100,
-    "attentionLevel": "high|medium|low"
-  },
-  "keyFindings": {
-    "highlights": [
-      {"title": "title", "context": "自然语言描述的发现"},
-      {"title": "title", "context": "自然语言描述的发现"},
-      {"title": "title", "context": "自然语言描述的发现"}
-    ],
-    "risks": [
-      {"title": "title", "context": "自然语言描述的风险"},
-      {"title": "title", "context": "自然语言描述的风险"}
-    ]
-  }
-}`
+	systemPrompt := `你是一位专业的股票分析师。请对给定股票进行全面深入的技术分析，并输出结构化的分析报告。
+
+分析要求：
+1. 技术面分析：结合K线形态、均线系统、MACD、KDJ、布林带等技术指标
+2. 趋势判断：判断当前趋势（上升/下降/震荡）及强度
+3. 支撑阻力：识别关键支撑位和阻力位
+4. 形态识别：识别常见的K线形态和趋势形态
+5. 动量分析：分析涨跌动量变化
+6. 成交量分析：分析量价关系
+7. 风险提示：识别潜在风险因素
+8. 投资建议：给出明确的操作建议（买入/卖出/持有）和风险等级
+
+请用中文输出详细的分析报告，重点突出3个亮点和2个风险点。`
+
+	log.Printf("[AI Analysis] Starting request for stock: %s (%s), Model: %s, API: %s", input.Code, input.Name, model, apiURL)
 
 	// Detect API type based on URL
-	isOpenAICompatible := strings.Contains(apiURL, "openai") || strings.Contains(apiURL, "minimax") || strings.Contains(apiURL, "deepseek") || strings.Contains(apiURL, "chat/completions")
-	isAnthropic := strings.Contains(apiURL, "anthropic") || strings.Contains(apiURL, "messages")
+	isOpenAICompatible := strings.Contains(apiURL, "openai") || strings.Contains(apiURL, "deepseek") || strings.Contains(apiURL, "chat/completions")
+	isMiniMaxAnthropic := strings.Contains(apiURL, "minimax") && strings.Contains(apiURL, "anthropic")
 
 	var reqBody []byte
 	var err error
 
-	if isOpenAICompatible && !isAnthropic {
-		// OpenAI-compatible format (MiniMax, DeepSeek, etc.)
+	if isOpenAICompatible {
+		// OpenAI-compatible format (DeepSeek, etc.)
 		reqBody, err = s.buildOpenAIRequest(model, systemPrompt, prompt)
+	} else if isMiniMaxAnthropic {
+		// MiniMax Anthropic-compatible format
+		reqBody, err = s.buildMiniMaxAnthropicRequest(model, systemPrompt, prompt)
 	} else {
 		// Anthropic format (Claude)
 		reqBody, err = s.buildAnthropicRequest(model, systemPrompt, prompt)
@@ -393,16 +398,20 @@ func (s *AIAnalysisService) generateWithClaude(input *AIAnalysisInput, techData 
 		return nil, err
 	}
 
+	log.Printf("[AI Analysis] Request built, body size: %d bytes", len(reqBody))
+
 	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(reqBody))
 	if err != nil {
 		return nil, err
 	}
 
 	// Set headers based on API type
-	if isOpenAICompatible && !isAnthropic {
+	if isOpenAICompatible {
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+apiKey)
-		// Add GroupID header for MiniMax API
+	} else if isMiniMaxAnthropic {
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+apiKey)
 		if groupID != "" {
 			req.Header.Set("GroupId", groupID)
 		}
@@ -413,18 +422,34 @@ func (s *AIAnalysisService) generateWithClaude(input *AIAnalysisInput, techData 
 	}
 
 	client := &http.Client{Timeout: 60 * time.Second}
+	log.Printf("[AI Analysis] Sending request to %s...", apiURL)
 	resp, err := client.Do(req)
 	if err != nil {
+		log.Printf("[AI Analysis] Request failed: %v", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
+	log.Printf("[AI Analysis] Response status: %d", resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Printf("AI API response status and body (first 200 chars): %s", string(body[:int(math.Min(float64(200), float64(len(body))))]))
+	log.Printf("[AI Analysis] Response body size: %d bytes", len(body))
+	if len(body) > 0 {
+		// Percent-encode non-ASCII to prevent terminal encoding issues (mojibake)
+		truncated := body[:int(math.Min(float64(500), float64(len(body))))]
+		encoded := &strings.Builder{}
+		for _, b := range truncated {
+			if b >= 0x20 && b <= 0x7E {
+				encoded.WriteByte(b)
+			} else {
+				encoded.WriteString(fmt.Sprintf("%%%02X", b))
+			}
+		}
+		log.Printf("[AI Analysis] Response body (first 500 chars): %s", encoded.String())
+	}
 
 	// Parse response based on API type
 	var report AIAnalysisReport
@@ -433,21 +458,39 @@ func (s *AIAnalysisService) generateWithClaude(input *AIAnalysisInput, techData 
 
 	var responseText string
 
-	if isOpenAICompatible && !isAnthropic {
+	if isOpenAICompatible {
 		responseText, err = s.parseOpenAIResponse(body)
 	} else {
-		responseText, err = s.parseAnthropicResponse(body)
+		responseText, err = s.parseMiniMaxAnthropicResponse(body)
 	}
 
 	if err != nil || responseText == "" {
-		log.Printf("Failed to parse AI response, falling back to heuristic: %v", err)
-		return s.generateHeuristicAnalysis(input, techData), nil
+		// Return heuristic with raw body preserved so user can see what went wrong
+		rawBody := string(body)
+		if len(rawBody) > 2000 {
+			rawBody = rawBody[:2000] + "..."
+		}
+		heuristicReport := s.generateHeuristicAnalysis(input, techData)
+		heuristicReport.RawAnalysis = fmt.Sprintf("[Parse error: %v]\n[Raw response: %s]", err, rawBody)
+		heuristicReport.AnalysisMethod = "ai"
+		log.Printf("[AI Analysis] Failed to parse AI response: %v, returning heuristic with raw body preserved", err)
+		return heuristicReport, nil
 	}
 
+	// Store raw analysis text
+	report.RawAnalysis = responseText
+
+	// Try to parse as JSON first, if fails use heuristic with raw text
 	if err := json.Unmarshal([]byte(responseText), &report); err != nil {
-		log.Printf("Failed to unmarshal AI report, falling back to heuristic: %v", err)
-		return s.generateHeuristicAnalysis(input, techData), nil
+		log.Printf("[AI Analysis] AI response is not JSON (free text format), using heuristic analysis: %v", err)
+		heuristicReport := s.generateHeuristicAnalysis(input, techData)
+		heuristicReport.RawAnalysis = responseText
+		heuristicReport.AnalysisMethod = "ai"
+		log.Printf("[AI Analysis] Successfully generated report with raw AI analysis for %s", input.Code)
+		return heuristicReport, nil
 	}
+
+	log.Printf("[AI Analysis] Successfully generated report for %s, composite score: %.1f", input.Code, report.Scores.CompositeScore)
 
 	return &report, nil
 }
@@ -473,6 +516,20 @@ func (s *AIAnalysisService) buildAnthropicRequest(model, systemPrompt, userPromp
 		"max_tokens":         2000,
 		"anthropic_version":  "2023-06-01",
 		"system":             systemPrompt,
+		"messages": []map[string]string{
+			{"role": "user", "content": userPrompt},
+		},
+	}
+	return json.Marshal(reqBody)
+}
+
+// buildMiniMaxAnthropicRequest builds request body for MiniMax Anthropic-compatible API
+func (s *AIAnalysisService) buildMiniMaxAnthropicRequest(model, systemPrompt, userPrompt string) ([]byte, error) {
+	reqBody := map[string]interface{}{
+		"model":     model,
+		"max_tokens": 2000,
+		"stream":    false,
+		"system":    systemPrompt,
 		"messages": []map[string]string{
 			{"role": "user", "content": userPrompt},
 		},
@@ -526,6 +583,35 @@ func (s *AIAnalysisService) parseAnthropicResponse(body []byte) (string, error) 
 		return "", fmt.Errorf("no content in response")
 	}
 	return resp.Content[0].Text, nil
+}
+
+// parseMiniMaxAnthropicResponse extracts text from MiniMax Anthropic-compatible API response
+func (s *AIAnalysisService) parseMiniMaxAnthropicResponse(body []byte) (string, error) {
+	var resp struct {
+		Content []struct {
+			Type string `json:"type"`
+			Text string `json:"text"`
+		} `json:"content"`
+		Error struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return "", err
+	}
+	if resp.Error.Message != "" {
+		return "", fmt.Errorf("MiniMax API error: %s", resp.Error.Message)
+	}
+	if len(resp.Content) == 0 {
+		return "", fmt.Errorf("no content in response")
+	}
+	// Find the text content block (skip thinking blocks)
+	for _, block := range resp.Content {
+		if block.Type == "text" && block.Text != "" {
+			return block.Text, nil
+		}
+	}
+	return "", fmt.Errorf("no text content in response")
 }
 
 // buildAnalysisPrompt constructs the prompt for AI analysis

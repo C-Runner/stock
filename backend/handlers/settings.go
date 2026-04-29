@@ -27,8 +27,8 @@ func GetAISettings(c *gin.Context) {
 			settings = models.AISettings{
 				UserID:  userIDStr,
 				APIKey:  "",
-				APIURL:  "https://api.minimaxi.com/v1/text/chatcompletion",
-				Model:   "MiniMax-Text-01",
+				APIURL:  "https://api.deepseek.com/chat/completions",
+				Model:   "deepseek-chat",
 				Enabled: true,
 			}
 			if err := config.DB.Create(&settings).Error; err != nil {
@@ -86,8 +86,8 @@ func UpdateAISettings(c *gin.Context) {
 			settings = models.AISettings{
 				UserID:  userIDStr,
 				APIKey:  "",
-				APIURL:  "https://api.minimaxi.com/v1/text/chatcompletion",
-				Model:   "MiniMax-Text-01",
+				APIURL:  "https://api.deepseek.com/chat/completions",
+				Model:   "deepseek-chat",
 				Enabled: true,
 			}
 			if err := config.DB.Create(&settings).Error; err != nil {
@@ -183,8 +183,8 @@ func TestAISettings(c *gin.Context) {
 	var err error
 
 	if isOpenAICompatible && !isAnthropic {
+		// MiniMax and similar APIs don't accept "model" in request body
 		reqBody, err = json.Marshal(map[string]interface{}{
-			"model": settings.Model,
 			"messages": []map[string]string{
 				{"role": "user", "content": testPrompt},
 			},
@@ -193,8 +193,13 @@ func TestAISettings(c *gin.Context) {
 	} else {
 		reqBody, err = json.Marshal(map[string]interface{}{
 			"model": settings.Model,
-			"messages": []map[string]string{
-				{"role": "user", "content": testPrompt},
+			"messages": []map[string]interface{}{
+				{
+					"role": "user",
+					"content": []map[string]string{
+						{"type": "text", "text": testPrompt},
+					},
+				},
 			},
 			"max_tokens": 10,
 		})
@@ -207,6 +212,13 @@ func TestAISettings(c *gin.Context) {
 		})
 		return
 	}
+
+	// Test log: log the request body sent to AI model
+	fmt.Printf("\n========== AI TEST SETTINGS LOG ==========\n")
+	fmt.Printf("URL: %s\n", settings.APIURL)
+	fmt.Printf("Model: %s\n", settings.Model)
+	fmt.Printf("Request Body:\n%s\n", string(reqBody))
+	fmt.Printf("==========================================\n")
 
 	req, err := http.NewRequest("POST", settings.APIURL, bytes.NewBuffer(reqBody))
 	if err != nil {
@@ -245,12 +257,70 @@ func TestAISettings(c *gin.Context) {
 	body, _ := io.ReadAll(resp.Body)
 	elapsed := time.Since(startTime)
 
+	// Test log: log the response body from AI model
+	fmt.Printf("\n########## AI TEST SETTINGS RESPONSE ##########\n")
+	fmt.Printf("Status: %d\n", resp.StatusCode)
+	fmt.Printf("Response Body:\n%s\n", string(body))
+	fmt.Printf("##############################################\n")
+
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		// Verify AI actually returned valid content
+		responseText := ""
+
+		if isOpenAICompatible && !isAnthropic {
+			// Try standard OpenAI/MiniMax format
+			var openAIResp struct {
+				Choices []struct {
+					Message struct {
+						Content string `json:"content"`
+					} `json:"message"`
+				} `json:"choices"`
+			}
+			if err := json.Unmarshal(body, &openAIResp); err == nil {
+				if len(openAIResp.Choices) > 0 && openAIResp.Choices[0].Message.Content != "" {
+					responseText = openAIResp.Choices[0].Message.Content
+				}
+			}
+
+			// Try MiniMax format (has "reply" field)
+			if responseText == "" {
+				var minimaxResp struct {
+					Reply string `json:"reply"`
+				}
+				if err := json.Unmarshal(body, &minimaxResp); err == nil && minimaxResp.Reply != "" {
+					responseText = minimaxResp.Reply
+				}
+			}
+		} else {
+			// Anthropic format
+			var anthropicResp struct {
+				Content []struct {
+					Type string `json:"type"`
+					Text string `json:"text"`
+				} `json:"content"`
+			}
+			if err := json.Unmarshal(body, &anthropicResp); err == nil {
+				if len(anthropicResp.Content) > 0 && anthropicResp.Content[0].Text != "" {
+					responseText = anthropicResp.Content[0].Text
+				}
+			}
+		}
+
+		if responseText == "" {
+			c.JSON(http.StatusOK, gin.H{
+				"success":    false,
+				"error":      fmt.Sprintf("AI returned empty response: %s", string(body)),
+				"statusCode": resp.StatusCode,
+			})
+			return
+		}
+
 		c.JSON(http.StatusOK, gin.H{
-			"success":     true,
-			"message":     "AI connection successful",
-			"model":       settings.Model,
-			"statusCode":  resp.StatusCode,
+			"success":      true,
+			"message":       "AI connection successful",
+			"aiResponse":   responseText,
+			"model":        settings.Model,
+			"statusCode":   resp.StatusCode,
 			"responseTime": elapsed.String(),
 		})
 	} else {

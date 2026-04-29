@@ -15,6 +15,12 @@ func GetAIAnalysis(c *gin.Context) {
 		return
 	}
 
+	userID := getUserID(c)
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
 	// Get quote
 	quote, err := services.SinaFinanceAPI(code)
 	if err != nil {
@@ -47,7 +53,7 @@ func GetAIAnalysis(c *gin.Context) {
 
 	// Get AI analysis (from cache or generate)
 	aiService := services.GetAIAnalysisService()
-	report, err := aiService.GetAIAnalysis(input)
+	report, err := aiService.GetAIAnalysis(input, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate AI analysis: " + err.Error()})
 		return

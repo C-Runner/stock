@@ -9,6 +9,13 @@ type AIAnalysisReport struct {
 	GeneratedAt  string          `json:"generatedAt"`
 	Cached       bool            `json:"cached"`
 	FromCache    bool            `json:"fromCache"`
+	AnalysisMethod string        `json:"analysisMethod"` // "ai" or "heuristic"
+
+	// Raw AI output text (unstructured)
+	RawAnalysis string          `json:"rawAnalysis"`
+
+	// Text summary of the analysis
+	Summary     string          `json:"summary"`
 
 	// Multi-dimensional scoring
 	Scores       Scores          `json:"scores"`
@@ -21,6 +28,12 @@ type AIAnalysisReport struct {
 
 	// Institutional sentiment
 	InstitutionalSentiment InstitutionalSentiment `json:"institutionalSentiment"`
+
+	// Chart analysis - detailed text interpretation of the chart
+	ChartAnalysis ChartAnalysis `json:"chartAnalysis"`
+
+	// Investment advice - comprehensive recommendations
+	InvestmentAdvice InvestmentAdvice `json:"investmentAdvice"`
 }
 
 // Scores represents multi-dimensional scoring
@@ -82,6 +95,28 @@ type InstitutionalSentiment struct {
 	RatioChange     string  `json:"ratioChange"`    // "improving", "stable", "deteriorating"
 	ConsensusTarget float64 `json:"consensusTarget"` // Average price target
 	ConsensusRating string  `json:"consensusRating"` // "buy", "hold", "sell"
+}
+
+// ChartAnalysis provides detailed text interpretation of the price chart
+type ChartAnalysis struct {
+	TrendInterpretation string   `json:"trendInterpretation"` // Natural language description of current trend
+	SupportResistance  string   `json:"supportResistance"`  // Key support/resistance levels analysis
+	VolumeAnalysis      string   `json:"volumeAnalysis"`     // Volume interpretation
+	IndicatorSummary    string   `json:"indicatorSummary"`   // Summary of technical indicators
+	PatternDescription  string   `json:"patternDescription"` // Identified patterns interpretation
+	MomentumAnalysis    string   `json:"momentumAnalysis"`   // Price momentum description
+}
+
+// InvestmentAdvice provides comprehensive investment recommendations
+type InvestmentAdvice struct {
+	OverallAdvice      string   `json:"overallAdvice"`      // Overall investment recommendation
+	EntryPoints        []string `json:"entryPoints"`        // Suggested entry price zones
+	ExitPoints         []string `json:"exitPoints"`         // Suggested exit price zones
+	StopLoss           string   `json:"stopLoss"`          // Recommended stop-loss level
+	RiskLevel          string   `json:"riskLevel"`         // "low", "medium", "high"
+	TimeHorizon        string   `json:"timeHorizon"`       // "short-term", "mid-term", "long-term"
+	PositionSizing     string   `json:"positionSizing"`    // Position sizing suggestions
+	RiskWarnings       []string `json:"riskWarnings"`      // Key risk warnings for investors
 }
 
 // AIAnalysisInput is the input data for AI analysis
