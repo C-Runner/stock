@@ -360,19 +360,16 @@ func (s *AIAnalysisService) getPatternSignals(ta *TechnicalAnalysis) []string {
 // generateWithClaude calls AI API for analysis (supports OpenAI-compatible and Anthropic formats)
 func (s *AIAnalysisService) generateWithClaude(input *AIAnalysisInput, techData map[string]interface{}, apiKey, apiURL, model, groupID string) (*AIAnalysisReport, error) {
 	prompt := s.buildAnalysisPrompt(input, techData)
-	systemPrompt := `你是一位专业的股票分析师。请对给定股票进行全面深入的技术分析，并输出结构化的分析报告。
+	systemPrompt := `你是一位专业的股票分析师。请对给定股票进行全面深入的技术分析。
 
-分析要求：
-1. 技术面分析：结合K线形态、均线系统、MACD、KDJ、布林带等技术指标
-2. 趋势判断：判断当前趋势（上升/下降/震荡）及强度
-3. 支撑阻力：识别关键支撑位和阻力位
-4. 形态识别：识别常见的K线形态和趋势形态
-5. 动量分析：分析涨跌动量变化
-6. 成交量分析：分析量价关系
-7. 风险提示：识别潜在风险因素
-8. 投资建议：给出明确的操作建议（买入/卖出/持有）和风险等级
+请用自然语言输出详细分析报告，包括：
+1. 总体评价和核心观点
+2. 技术面分析（包括趋势、指标状态）
+3. 关键发现（亮点和风险点）
+4. 操作建议（入场点位、止损、仓位）
+5. 风险提示
 
-请用中文输出详细的分析报告，重点突出3个亮点和2个风险点。`
+请用中文输出，格式清晰易读，直接给出分析内容，不要输出JSON或任何标记符号。`
 
 	log.Printf("[AI Analysis] Starting request for stock: %s (%s), Model: %s, API: %s", input.Code, input.Name, model, apiURL)
 
@@ -438,17 +435,14 @@ func (s *AIAnalysisService) generateWithClaude(input *AIAnalysisInput, techData 
 
 	log.Printf("[AI Analysis] Response body size: %d bytes", len(body))
 	if len(body) > 0 {
-		// Percent-encode non-ASCII to prevent terminal encoding issues (mojibake)
+		// Truncate and decode as UTF-8 for readable logging
 		truncated := body[:int(math.Min(float64(500), float64(len(body))))]
-		encoded := &strings.Builder{}
-		for _, b := range truncated {
-			if b >= 0x20 && b <= 0x7E {
-				encoded.WriteByte(b)
-			} else {
-				encoded.WriteString(fmt.Sprintf("%%%02X", b))
-			}
+		decoded := string(truncated)
+		// Truncate to first line or 300 chars for readability
+		if len(decoded) > 300 {
+			decoded = decoded[:300] + "..."
 		}
-		log.Printf("[AI Analysis] Response body (first 500 chars): %s", encoded.String())
+		log.Printf("[AI Analysis] Response body: %s", decoded)
 	}
 
 	// Parse response based on API type
@@ -482,13 +476,30 @@ func (s *AIAnalysisService) generateWithClaude(input *AIAnalysisInput, techData 
 
 	// Try to parse as JSON first, if fails use heuristic with raw text
 	if err := json.Unmarshal([]byte(responseText), &report); err != nil {
-		log.Printf("[AI Analysis] AI response is not JSON (free text format), using heuristic analysis: %v", err)
+		log.Printf("[AI Analysis] AI response is not JSON (free text format): %v", err)
+		// Use heuristic as base but populate key fields from available data
 		heuristicReport := s.generateHeuristicAnalysis(input, techData)
+		// Store the AI's raw analysis for display (preserve markdown for frontend rendering)
 		heuristicReport.RawAnalysis = responseText
 		heuristicReport.AnalysisMethod = "ai"
+		// Try to extract summary from the text
+		lines := strings.Split(responseText, "\n")
+		if len(lines) > 0 {
+			// First non-empty line often contains the main conclusion
+			for _, line := range lines {
+				line = strings.TrimSpace(line)
+				if len(line) > 10 && !strings.HasPrefix(line, "#") {
+					heuristicReport.Summary = s.extractSummary(line)
+					break
+				}
+			}
+		}
 		log.Printf("[AI Analysis] Successfully generated report with raw AI analysis for %s", input.Code)
 		return heuristicReport, nil
 	}
+
+	// RawAnalysis is sent to frontend for markdown rendering, preserve markdown formatting
+	// (formatRawAnalysisText was stripping # headers which broke frontend markdown rendering)
 
 	log.Printf("[AI Analysis] Successfully generated report for %s, composite score: %.1f", input.Code, report.Scores.CompositeScore)
 
@@ -645,14 +656,29 @@ Technical Analysis:
 		techData["kdjStatus"], techData["bollStatus"], techData["volumeAnalysis"],
 		techData["patterns"], techData["recommendation"], techData["confidence"])
 
-	return fmt.Sprintf(`分析股票 %s (%s) 的投资价值。
+	return fmt.Sprintf(`请分析股票 %s (%s) 的投资价值。
 
-%s
+股票行情：
+- 当前价：%.2f
+- 开盘价：%.2f
+- 最高价：%.2f
+- 最低价：%.2f
+- 成交量：%d
 
-%s
+技术指标：
+- MA状态：%v
+- RSI状态：%v
+- MACD状态：%v
+- KDJ状态：%v
+- BOLL状态：%v
+- 成交量分析：%v
+- 形态信号：%v
 
-请生成完整的结构化分析报告，突出3个亮点和2个风险点。用中文输出。
-`, input.Code, input.Name, quoteStr, techStr)
+请用自然语言输出详细分析，直接给出结论，不需要JSON格式。用中文输出。`, input.Code, input.Name,
+		quote.Current, quote.Open, quote.High, quote.Low, quote.Volume,
+		techData["maStatus"], techData["rsiStatus"], techData["macdStatus"],
+		techData["kdjStatus"], techData["bollStatus"], techData["volumeAnalysis"],
+		techData["patterns"])
 }
 
 // generateHeuristicAnalysis generates analysis without AI (fallback)
@@ -1111,4 +1137,56 @@ func (s *AIAnalysisService) randInt(min, max int) int {
 
 func (s *AIAnalysisService) randomChoice(choices []string) string {
 	return choices[s.randInt(0, len(choices)-1)]
+}
+
+// extractSummary extracts a short summary from the first meaningful line
+func (s *AIAnalysisService) extractSummary(text string) string {
+	if text == "" {
+		return ""
+	}
+	// Remove markdown headers
+	text = strings.ReplaceAll(text, "# ", "")
+	text = strings.ReplaceAll(text, "## ", "")
+	text = strings.ReplaceAll(text, "### ", "")
+	// Trim and limit length
+	text = strings.TrimSpace(text)
+	if len(text) > 100 {
+		text = text[:100] + "..."
+	}
+	return text
+}
+
+// formatRawAnalysisText converts raw AI output into more readable format
+func (s *AIAnalysisService) formatRawAnalysisText(text string) string {
+	if text == "" {
+		return ""
+	}
+	// Remove markdown headers (# Title -> Title)
+	text = strings.ReplaceAll(text, "# ", "")
+	// Remove any markdown formatting that could break display
+	text = strings.ReplaceAll(text, "## ", "")
+	text = strings.ReplaceAll(text, "### ", "")
+	// Clean up JSON-like artifacts
+	text = strings.TrimSpace(text)
+	// Remove leading/trailing quotes if present
+	if strings.HasPrefix(text, "\"") && strings.HasSuffix(text, "\"") {
+		text = text[1 : len(text)-1]
+	}
+	// Replace escaped characters
+	text = strings.ReplaceAll(text, "\\n", "\n")
+	text = strings.ReplaceAll(text, "\\t", "\t")
+	text = strings.ReplaceAll(text, "\\\"", "\"")
+	// Remove any remaining JSON artifacts like { or } at start/end
+	text = strings.TrimPrefix(text, "{")
+	text = strings.TrimPrefix(text, "}")
+	text = strings.TrimSuffix(text, "{")
+	text = strings.TrimSuffix(text, "}")
+	// Remove any control characters that could cause issues
+	text = strings.Map(func(r rune) rune {
+		if r < 32 && r != '\n' && r != '\t' && r != '\r' {
+			return -1
+		}
+		return r
+	}, text)
+	return text
 }

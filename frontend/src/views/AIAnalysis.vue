@@ -38,10 +38,14 @@
             <div class="card-header">
               <n-icon size="20"><IconRobot /></n-icon>
               <span>AI Analysis</span>
+              <button class="toggle-btn" @click="showRawAnalysis = !showRawAnalysis">
+                {{ showRawAnalysis ? 'Hide' : 'Show' }}
+              </button>
             </div>
           </template>
-          <div class="raw-analysis-content">
-            <pre>{{ report.rawAnalysis }}</pre>
+          <div v-if="showRawAnalysis" class="raw-analysis-content" v-html="renderMarkdown(report.rawAnalysis)"></div>
+          <div v-else class="raw-analysis-collapsed">
+            <span class="collapsed-hint">Tap "Show" to view raw AI analysis</span>
           </div>
         </n-card>
 
@@ -394,11 +398,26 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { marked } from 'marked'
+import { markedHighlight } from 'marked-highlight'
+import hljs from 'highlight.js'
+import 'highlight.js/styles/github-dark.css'
 import {
   NCard, NSpace, NSpin, NAlert, NDivider, NIcon
 } from 'naive-ui'
 import { aiApi, type AIAnalysisReport } from '../api'
 import { IconArrowLeft, IconChart, IconClock, IconLight, IconTrend, IconRobot, IconHome, IconStar } from '../components/icons'
+
+// Configure marked with highlight.js
+marked.use(markedHighlight({
+  langPrefix: 'hljs language-',
+  highlight(code, lang) {
+    if (lang && hljs.getLanguage(lang)) {
+      return hljs.highlight(code, { language: lang }).value
+    }
+    return hljs.highlightAuto(code).value
+  }
+}))
 
 const route = useRoute()
 const router = useRouter()
@@ -407,6 +426,7 @@ const code = route.params.code as string
 const report = ref<AIAnalysisReport | null>(null)
 const loading = ref(true)
 const error = ref('')
+const showRawAnalysis = ref(false)
 
 const fetchAnalysis = async () => {
   loading.value = true
@@ -440,6 +460,17 @@ const getAdviceClass = (riskLevel: string) => {
   if (riskLevel === 'low' || riskLevel === 'medium') return 'advice-bullish'
   if (riskLevel === 'high') return 'advice-bearish'
   return 'advice-neutral'
+}
+
+const renderMarkdown = (text: string): string => {
+  if (!text) return ''
+  // Strip paragraph tags: <p>content</p> -> content
+  text = text.replace(/<\/?p[^>]*>/gi, '')
+  // Fix markdown headers: add space after # so marked can parse them
+  // #一 -> # 一, ###标题 -> ### 标题, etc.
+  text = text.replace(/(#{1,6})([^\s])/g, '$1 $2')
+  // Parse with marked, using breaks for proper line handling
+  return marked.parse(text, { breaks: true }) as string
 }
 
 onMounted(fetchAnalysis)
@@ -719,6 +750,22 @@ onMounted(fetchAnalysis)
 
 .card-header :deep(.n-icon) {
   color: #6366f1 !important;
+}
+
+.toggle-btn {
+  margin-left: auto;
+  padding: 4px 12px;
+  background: rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 8px;
+  color: #818cf8;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toggle-btn:hover {
+  background: rgba(99, 102, 241, 0.3);
 }
 
 .score-cards {
@@ -1013,7 +1060,7 @@ onMounted(fetchAnalysis)
 .sentiment-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 12px;
 }
 
 .sentiment-chart {
@@ -1132,23 +1179,177 @@ onMounted(fetchAnalysis)
 
 .raw-analysis-content {
   font-size: 14px;
-  line-height: 1.8;
+  line-height: 1.7;
   color: rgba(255, 255, 255, 0.85);
 }
 
-.raw-analysis-content pre {
+.raw-analysis-content h2 {
+  font-size: 18px;
+  margin: 12px 0 8px;
+  color: #fff;
+}
+
+.raw-analysis-content h3 {
+  font-size: 16px;
+  margin: 10px 0 6px;
+  color: #fff;
+}
+
+.raw-analysis-content h4 {
+  font-size: 14px;
+  margin: 8px 0 4px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.raw-analysis-content p {
+  margin: 4px 0;
+}
+
+.raw-analysis-content ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.raw-analysis-content li {
+  margin: 4px 0;
+}
+
+.raw-analysis-content strong {
+  color: #818cf8;
+}
+
+.raw-analysis-content em {
+  color: rgba(255, 255, 255, 0.7);
+  font-style: italic;
+}
+
+.raw-analysis-content .section-hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.3), transparent);
+  margin: 16px 0;
+}
+
+.raw-analysis-content .para {
   margin: 0;
-  padding: 0;
-  font-family: inherit;
-  white-space: pre-wrap;
-  word-wrap: break-word;
+  line-height: 1.7;
+}
+
+.raw-analysis-content .formatted-content {
+  line-height: 1.8;
+}
+
+.raw-analysis-content .section-item {
+  display: flex;
+  padding: 8px 12px;
+  margin: 4px 0;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  border-left: 3px solid #6366f1;
+}
+
+.raw-analysis-content .section-label {
+  color: #818cf8;
+  font-weight: 500;
+  min-width: 120px;
+  flex-shrink: 0;
+}
+
+.raw-analysis-content .section-value {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.raw-analysis-content .bullet-item {
+  display: block;
+  padding: 4px 12px;
+  margin: 4px 0;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.raw-analysis-content .bullet-item::before {
+  content: '●';
+  color: #6366f1;
+  margin-right: 10px;
+}
+
+.raw-analysis-content .numbered-item {
+  display: block;
+  padding: 4px 12px;
+  margin: 4px 0;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* Markdown rendering styles */
+.raw-analysis-content .md-header {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+  margin: 16px 0 8px 0;
+  padding-left: 0;
+}
+
+.raw-analysis-content .md-header::before {
+  content: '▎';
+  color: #6366f1;
+  margin-right: 8px;
+}
+
+.raw-analysis-content .md-list {
+  margin: 8px 0;
+  padding-left: 20px;
+  list-style: none;
+}
+
+.raw-analysis-content .md-list-item {
+  padding: 6px 12px;
+  margin: 4px 0;
+  color: rgba(255, 255, 255, 0.85);
+  position: relative;
+}
+
+.raw-analysis-content .md-list-item::before {
+  content: '●';
+  color: #6366f1;
+  position: absolute;
+  left: -4px;
+}
+
+.raw-analysis-content .md-number-item {
+  padding: 6px 12px;
+  margin: 4px 0;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.raw-analysis-content .md-paragraph {
+  margin: 8px 0;
+  padding: 8px 12px;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.7;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+}
+
+.raw-analysis-content .md-bold {
+  color: #818cf8;
+  font-weight: 600;
+}
+
+.raw-analysis-collapsed {
+  text-align: center;
+  padding: 16px;
+}
+
+.collapsed-hint {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.4);
+  font-style: italic;
 }
 
 /* Chart Analysis Styles */
 .chart-analysis-section {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
 }
 
 .analysis-item {
@@ -1173,12 +1374,12 @@ onMounted(fetchAnalysis)
 
 /* Investment Advice Styles */
 .advice-overall {
-  padding: 16px;
+  padding: 14px;
   border-radius: 12px;
   font-size: 14px;
   font-weight: 600;
   text-align: center;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .advice-overall.advice-bullish {
@@ -1203,7 +1404,7 @@ onMounted(fetchAnalysis)
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .advice-section {
@@ -1236,7 +1437,7 @@ onMounted(fetchAnalysis)
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .advice-detail {
