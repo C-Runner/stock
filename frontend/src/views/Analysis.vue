@@ -307,7 +307,11 @@
       </n-card>
     </n-space>
 
-    <BottomTabs :tabs="bottomTabs" />
+    <BottomTabs
+      :active-tab="activeTab"
+      :on-add="() => router.push('/')"
+      @navigate="handleNavigate"
+    />
   </div>
 </template>
 
@@ -319,7 +323,7 @@ import {
   NDivider, NIcon
 } from 'naive-ui'
 import { stockApi, type StockAnalysis, type StockQuote, type TechnicalAnalysis } from '../api'
-import { IconWallet, IconTrend, IconClock, IconChart, IconHome, IconStar, IconRobot } from '../components/icons'
+import { IconWallet, IconTrend, IconClock, IconChart, IconRobot } from '../components/icons'
 import { formatVolume, formatAmount } from '../utils/format'
 import { getLatestValue, getRSIClass, getKDJClass, getWRClass } from '../utils/technical'
 import KLineChart from '../components/KLineChart.vue'
@@ -344,10 +348,15 @@ const technical = ref<TechnicalAnalysis | null>(null)
 const techLoading = ref(false)
 const techError = ref('')
 
-const bottomTabs = computed(() => [
-  { icon: IconHome, label: 'Portfolio', action: () => router.push('/') },
-  { icon: IconStar, label: 'Watchlist', action: () => router.push('/watchlist'), primary: true }
-])
+const activeTab = computed(() => {
+  if (route.path === '/watchlist') return 'watchlist'
+  return 'home'
+})
+
+const handleNavigate = (tab: 'home' | 'watchlist') => {
+  if (tab === 'home') router.push('/')
+  else if (tab === 'watchlist') router.push('/watchlist')
+}
 
 const fetchAnalysis = async () => {
   loading.value = true

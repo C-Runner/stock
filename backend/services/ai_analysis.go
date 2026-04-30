@@ -627,35 +627,6 @@ func (s *AIAnalysisService) parseMiniMaxAnthropicResponse(body []byte) (string, 
 
 // buildAnalysisPrompt constructs the prompt for AI analysis
 func (s *AIAnalysisService) buildAnalysisPrompt(input *AIAnalysisInput, techData map[string]interface{}) string {
-	quote := input.Quote
-	quoteStr := ""
-	if quote != nil {
-		quoteStr = fmt.Sprintf(`
-Stock Quote:
-- Current Price: %.2f
-- Open: %.2f
-- High: %.2f
-- Low: %.2f
-- Prev Close: %.2f
-- Volume: %d
-- Amount: %.2f
-`, quote.Current, quote.Open, quote.High, quote.Low, quote.PrevClose, quote.Volume, quote.Amount)
-	}
-
-	techStr := fmt.Sprintf(`
-Technical Analysis:
-- MA Status: %v
-- RSI Status: %v
-- MACD Status: %v
-- KDJ Status: %v
-- BOLL Status: %v
-- Volume: %v
-- Patterns: %v
-- Recommendation: %v (confidence: %.0f%%)
-`, techData["maStatus"], techData["rsiStatus"], techData["macdStatus"],
-		techData["kdjStatus"], techData["bollStatus"], techData["volumeAnalysis"],
-		techData["patterns"], techData["recommendation"], techData["confidence"])
-
 	return fmt.Sprintf(`请分析股票 %s (%s) 的投资价值。
 
 股票行情：
@@ -675,7 +646,7 @@ Technical Analysis:
 - 形态信号：%v
 
 请用自然语言输出详细分析，直接给出结论，不需要JSON格式。用中文输出。`, input.Code, input.Name,
-		quote.Current, quote.Open, quote.High, quote.Low, quote.Volume,
+		input.Quote.Current, input.Quote.Open, input.Quote.High, input.Quote.Low, input.Quote.Volume,
 		techData["maStatus"], techData["rsiStatus"], techData["macdStatus"],
 		techData["kdjStatus"], techData["bollStatus"], techData["volumeAnalysis"],
 		techData["patterns"])

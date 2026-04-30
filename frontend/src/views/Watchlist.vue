@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import {
   NButton, NIcon,
   NSwitch, NSpin, NEmpty, NButtonGroup
 } from 'naive-ui'
 import { watchlistApi, stockApi, backupApi, type WatchlistItem, type StockQuote } from '../api'
-import { IconRefresh, IconDelete, IconHome, IconPlus, IconBackup, IconCloudDownload } from '../components/icons'
+import { IconRefresh, IconDelete, IconBackup, IconCloudDownload } from '../components/icons'
 import StockSearch from '../components/StockSearch.vue'
 import BackgroundOrbs from '../components/BackgroundOrbs.vue'
 import BottomTabs from '../components/BottomTabs.vue'
@@ -29,10 +29,12 @@ const lastRefresh = ref<Date | null>(null)
 
 const showSearch = ref(false)
 
-const bottomTabs = computed(() => [
-  { icon: IconHome, label: 'Portfolio', action: () => router.push('/') },
-  { icon: IconPlus, label: 'Add', action: () => { showSearch.value = true }, primary: true }
-])
+const activeTab = computed(() => 'watchlist')
+
+const handleNavigate = (tab: 'home' | 'watchlist') => {
+  if (tab === 'home') router.push('/')
+  else if (tab === 'watchlist') router.push('/watchlist')
+}
 
 interface WatchlistRow {
   code: string
@@ -347,7 +349,11 @@ onUnmounted(() => stopAutoRefresh())
       @select="handleAddToWatchlist"
     />
 
-    <BottomTabs :tabs="bottomTabs" />
+    <BottomTabs
+      :active-tab="activeTab"
+      :on-add="() => showSearch = true"
+      @navigate="handleNavigate"
+    />
   </div>
 </template>
 

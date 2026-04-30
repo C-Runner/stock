@@ -152,24 +152,33 @@
       </section>
     </div>
 
-    <BottomTabs :tabs="bottomTabs" />
+    <BottomTabs
+      :active-tab="activeTab"
+      :on-add="() => router.push('/')"
+      @navigate="handleNavigate"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, watch, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { settingsApi, type AISettingsResponse, type AISettingsRequest } from '../api'
-import { IconSearch, IconWallet } from '../components/icons'
 import BackgroundOrbs from '../components/BackgroundOrbs.vue'
 import BottomTabs from '../components/BottomTabs.vue'
 
 const router = useRouter()
+const route = useRoute()
 
-const bottomTabs = computed(() => [
-  { icon: IconSearch, label: 'Watchlist', action: () => router.push('/watchlist') },
-  { icon: IconWallet, label: 'Holdings', action: () => router.push('/home') }
-])
+const activeTab = computed(() => {
+  if (route.path === '/watchlist') return 'watchlist'
+  return 'home'
+})
+
+const handleNavigate = (tab: 'home' | 'watchlist') => {
+  if (tab === 'home') router.push('/')
+  else if (tab === 'watchlist') router.push('/watchlist')
+}
 
 const loading = ref(true)
 const saving = ref(false)

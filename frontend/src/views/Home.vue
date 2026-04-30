@@ -142,7 +142,11 @@
       </div>
     </div>
 
-    <BottomTabs :tabs="bottomTabs" />
+    <BottomTabs
+      :active-tab="activeTab"
+      :on-add="() => showAddModal = true"
+      @navigate="handleNavigate"
+    />
 
     <AddStockModal v-model:show="showAddModal" @added="fetchStocks" />
     <EditStockModal v-model:show="showEditStockModal" :stock="editStockForm" @saved="fetchStocks" />
@@ -152,10 +156,10 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { NButton, NEmpty, NIcon } from 'naive-ui'
 import { stockApi, authApi, type Stock, type StockRequest } from '../api'
-import { IconPlus, IconWallet, IconCoin, IconTrend, IconDataLine, IconRefresh, IconSearch, IconDelete, IconEdit } from '../components/icons'
+import { IconWallet, IconCoin, IconTrend, IconDataLine, IconRefresh, IconSearch, IconDelete, IconEdit } from '../components/icons'
 import BackgroundOrbs from '../components/BackgroundOrbs.vue'
 import BottomTabs from '../components/BottomTabs.vue'
 import AddStockModal from '../components/AddStockModal.vue'
@@ -163,6 +167,7 @@ import EditStockModal from '../components/EditStockModal.vue'
 import DeleteModal from '../components/DeleteModal.vue'
 
 const router = useRouter()
+const route = useRoute()
 
 const stocks = ref<Stock[]>([])
 const loading = ref(false)
@@ -185,10 +190,16 @@ const selectedStockName = ref('')
 const showEditStockModal = ref(false)
 const editStockForm = ref<StockRequest | null>(null)
 
-const bottomTabs = computed(() => [
-  { icon: IconSearch, label: 'Watchlist', action: () => router.push('/watchlist') },
-  { icon: IconPlus, label: 'Add Stock', action: () => { showAddModal.value = true }, primary: true }
-])
+const activeTab = computed(() => {
+  if (route.path === '/watchlist') return 'watchlist'
+  if (route.path === '/' || route.path.startsWith('/analysis')) return 'home'
+  return 'home'
+})
+
+const handleNavigate = (tab: 'home' | 'watchlist') => {
+  if (tab === 'home') router.push('/')
+  else if (tab === 'watchlist') router.push('/watchlist')
+}
 
 const showDeletePopup = (code: string, name: string) => {
   selectedStockCode.value = code
