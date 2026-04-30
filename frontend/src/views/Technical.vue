@@ -1,9 +1,6 @@
 <template>
   <div class="technical">
-    <div class="background">
-      <div class="gradient-orb orb-1"></div>
-      <div class="gradient-orb orb-2"></div>
-    </div>
+    <BackgroundOrbs />
 
     <n-space vertical :size="12" class="content" :style="{ width: '100%' }">
       <div class="page-header">
@@ -51,12 +48,13 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
-  NCard, NSpace, NSpin, NAlert, NIcon
+  NCard, NSpace, NSpin, NIcon
 } from 'naive-ui'
 import { stockApi, type TechnicalAnalysis, type StockQuote } from '../api'
 import { IconChart } from '../components/icons'
 import KLineChart from '../components/KLineChart.vue'
 import { RecommendationCard, PeriodAnalysis, LevelsSection, PatternSection } from '../components/technical'
+import BackgroundOrbs from '../components/BackgroundOrbs.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -131,96 +129,15 @@ onUnmounted(() => {
   touch-action: pan-y;
 }
 
-.background {
-  position: fixed;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.gradient-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.4;
-}
-
-.orb-1 {
-  width: 500px;
-  height: 500px;
-  background: #10b981;
-  top: -150px;
-  left: -100px;
-  animation: float 8s ease-in-out infinite;
-}
-
-.orb-2 {
-  width: 400px;
-  height: 400px;
-  background: #059669;
-  bottom: -100px;
-  right: -100px;
-  animation: float 10s ease-in-out infinite reverse;
-}
-
-@keyframes float {
-  0%, 100% { transform: translate(0, 0); }
-  50% { transform: translate(30px, -30px); }
-}
-
 .content {
   position: relative;
   align-items: stretch;
   width: 100%;
 }
 
-.page-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 8px;
-}
-
-.header-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.header-info .subtitle {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 14px;
-}
-
-.page-title {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 600;
-  color: #fff;
-}
-
-.analysis-card {
-  --n-border-radius: 20px !important;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.05) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  backdrop-filter: blur(20px);
-  transition: all 0.3s ease;
-}
-
 .analysis-card:hover {
   border-color: rgba(255, 255, 255, 0.15) !important;
   box-shadow: 0 8px 32px rgba(16, 185, 129, 0.1) !important;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 600;
-  font-size: 16px;
-  color: #fff;
 }
 
 .card-header :deep(.n-icon) {

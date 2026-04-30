@@ -55,5 +55,15 @@ const getSupportResistanceSummary = () => {
   line-height: 1.9;
   color: rgba(255, 255, 255, 0.8);
   white-space: pre-line;
+  word-break: break-all;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+@media (max-width: 768px) {
+  .period-desc {
+    font-size: 11px;
+    line-height: 1.8;
+  }
 }
 </style>

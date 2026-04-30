@@ -31,78 +31,21 @@ const themeOverrides = {
 </style>
 
 <style>
-.n-button__icon {
-  background-color: transparent !important;
-  background: rgba(0,0,0,0) !important;
-  background-image: none !important;
-  --n-color: rgba(0,0,0,0) !important;
-  --n-icon-color: rgba(0,0,0,0) !important;
-}
-
-.n-button__icon::before,
-.n-button__icon::after {
-  background-color: transparent !important;
-  background: rgba(0,0,0,0) !important;
-}
-
-.n-button--text .n-button__icon {
-  background-color: transparent !important;
-  background: rgba(0,0,0,0) !important;
-  background-image: none !important;
-  --n-color: rgba(0,0,0,0) !important;
-}
-
+.n-button__icon,
 .n-icon,
 .n-icon-slot,
 .n-base-icon,
 .n-button .n-icon-slot,
-.n-button--text .n-icon-slot {
+.n-button--text .n-icon-slot,
+[class*="icon-slot"] {
   background-color: transparent !important;
-  background: rgba(0,0,0,0) !important;
   background-image: none !important;
-  --n-color: rgba(0,0,0,0) !important;
 }
 
+.n-button__icon::before,
+.n-button__icon::after,
 .n-icon::before,
 .n-icon::after {
   background-color: transparent !important;
-}
-
-.n-button__icon .n-icon,
-.n-button__icon .n-icon-slot,
-.n-button__icon .n-base-icon {
-  background-color: transparent !important;
-  background: rgba(0,0,0,0) !important;
-  background-image: none !important;
-  --n-color: rgba(0,0,0,0) !important;
-}
-
-.n-button__icon .n-icon svg,
-.n-button__icon svg {
-  background-color: transparent !important;
-  background: rgba(0,0,0,0) !important;
-  background-image: none !important;
-}
-
-.n-button__icon > * {
-  background-color: transparent !important;
-  background: rgba(0,0,0,0) !important;
-  background-image: none !important;
-}
-
-[class*="icon-slot"] {
-  background-color: transparent !important;
-  background: rgba(0,0,0,0) !important;
-  --n-color: rgba(0,0,0,0) !important;
-}
-
-.n-base-icon {
-  background-color: transparent !important;
-  background: rgba(0,0,0,0) !important;
-}
-
-.n-icon[class] {
-  background-color: transparent !important;
-  background: rgba(0,0,0,0) !important;
 }
 </style>

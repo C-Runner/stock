@@ -1,12 +1,5 @@
 const API_BASE_URL = ''
 
-export interface HealthResponse {
-  status: string
-  timestamp: string
-  service: string
-}
-
-// Stock types
 export interface Stock {
   code: string
   name: string
@@ -258,112 +251,45 @@ const getAuthHeaders = () => {
   return headers
 }
 
-export const api = {
-  async get<T>(path: string, timeoutMs = 10000): Promise<T> {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), timeoutMs)
-    try {
-      const response = await fetch(`${API_BASE_URL}${path}`, {
-        method: 'GET',
-        headers: getAuthHeaders(),
-        signal: controller.signal
-      })
-      clearTimeout(timeout)
-      if (response.status === 401) {
-        localStorage.removeItem('token')
-        localStorage.removeItem('tokenExpiry')
-        window.location.href = '/login'
-        throw new Error('Unauthorized')
-      }
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.status}`)
-      }
-      return response.json()
-    } catch (e) {
-      clearTimeout(timeout)
-      throw e
-    }
-  },
+const handleUnauthorized = () => {
+  localStorage.removeItem('token')
+  localStorage.removeItem('tokenExpiry')
+  window.location.href = '/login'
+}
 
-  async post<T>(path: string, data: unknown, timeoutMs = 10000): Promise<T> {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), timeoutMs)
-    try {
-      const response = await fetch(`${API_BASE_URL}${path}`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
-        signal: controller.signal
-      })
-      clearTimeout(timeout)
-      if (response.status === 401) {
-        localStorage.removeItem('token')
-        localStorage.removeItem('tokenExpiry')
-        window.location.href = '/login'
-        throw new Error('Unauthorized')
-      }
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.status}`)
-      }
-      return response.json()
-    } catch (e) {
-      clearTimeout(timeout)
-      throw e
+async function request<T>(path: string, method: string, data?: unknown, timeoutMs = 10000): Promise<T> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const options: RequestInit = {
+      method,
+      headers: getAuthHeaders(),
+      signal: controller.signal
     }
-  },
-
-  async put<T>(path: string, data: unknown, timeoutMs = 10000): Promise<T> {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), timeoutMs)
-    try {
-      const response = await fetch(`${API_BASE_URL}${path}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
-        signal: controller.signal
-      })
-      clearTimeout(timeout)
-      if (response.status === 401) {
-        localStorage.removeItem('token')
-        localStorage.removeItem('tokenExpiry')
-        window.location.href = '/login'
-        throw new Error('Unauthorized')
-      }
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.status}`)
-      }
-      return response.json()
-    } catch (e) {
-      clearTimeout(timeout)
-      throw e
+    if (data !== undefined) {
+      options.body = JSON.stringify(data)
     }
-  },
-
-  async delete<T>(path: string, timeoutMs = 10000): Promise<T> {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), timeoutMs)
-    try {
-      const response = await fetch(`${API_BASE_URL}${path}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders(),
-        signal: controller.signal
-      })
-      clearTimeout(timeout)
-      if (response.status === 401) {
-        localStorage.removeItem('token')
-        localStorage.removeItem('tokenExpiry')
-        window.location.href = '/login'
-        throw new Error('Unauthorized')
-      }
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.status}`)
-      }
-      return response.json()
-    } catch (e) {
-      clearTimeout(timeout)
-      throw e
+    const response = await fetch(`${API_BASE_URL}${path}`, options)
+    clearTimeout(timeout)
+    if (response.status === 401) {
+      handleUnauthorized()
+      throw new Error('Unauthorized')
     }
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.status}`)
+    }
+    return response.json()
+  } catch (e) {
+    clearTimeout(timeout)
+    throw e
   }
+}
+
+export const api = {
+  get: <T>(path: string, timeoutMs = 10000) => request<T>(path, 'GET', undefined, timeoutMs),
+  post: <T>(path: string, data: unknown, timeoutMs = 10000) => request<T>(path, 'POST', data, timeoutMs),
+  put: <T>(path: string, data: unknown, timeoutMs = 10000) => request<T>(path, 'PUT', data, timeoutMs),
+  delete: <T>(path: string, timeoutMs = 10000) => request<T>(path, 'DELETE', undefined, timeoutMs)
 }
 
 export const healthApi = {

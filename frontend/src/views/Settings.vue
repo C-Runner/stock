@@ -1,10 +1,6 @@
 <template>
   <div class="settings">
-    <div class="background">
-      <div class="gradient-orb orb-1"></div>
-      <div class="gradient-orb orb-2"></div>
-      <div class="gradient-orb orb-3"></div>
-    </div>
+    <BackgroundOrbs variant="green" />
 
     <div class="settings-header">
       <div class="header-left">
@@ -156,31 +152,24 @@
       </section>
     </div>
 
-    <div class="bottom-tabs">
-      <div class="tab-item" @click="router.push('/watchlist')">
-        <div class="tab-icon">
-          <n-icon size="22"><IconSearch /></n-icon>
-        </div>
-        <span class="tab-label">Watchlist</span>
-      </div>
-      <div class="tab-item" @click="router.push('/home')">
-        <div class="tab-icon">
-          <n-icon size="22"><IconWallet /></n-icon>
-        </div>
-        <span class="tab-label">Holdings</span>
-      </div>
-    </div>
+    <BottomTabs :tabs="bottomTabs" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { NIcon } from 'naive-ui'
 import { settingsApi, type AISettingsResponse, type AISettingsRequest } from '../api'
 import { IconSearch, IconWallet } from '../components/icons'
+import BackgroundOrbs from '../components/BackgroundOrbs.vue'
+import BottomTabs from '../components/BottomTabs.vue'
 
 const router = useRouter()
+
+const bottomTabs = computed(() => [
+  { icon: IconSearch, label: 'Watchlist', action: () => router.push('/watchlist') },
+  { icon: IconWallet, label: 'Holdings', action: () => router.push('/home') }
+])
 
 const loading = ref(true)
 const saving = ref(false)
@@ -327,59 +316,6 @@ onMounted(loadSettings)
   padding-bottom: calc(70px + 6px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
-}
-
-.background {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: -1;
-}
-
-.gradient-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.4;
-}
-
-.orb-1 {
-  width: 500px;
-  height: 500px;
-  background: #6366f1;
-  top: -150px;
-  left: -100px;
-  animation: float 8s ease-in-out infinite;
-}
-
-.orb-2 {
-  width: 400px;
-  height: 400px;
-  background: #8b5cf6;
-  bottom: -100px;
-  right: -100px;
-  animation: float 10s ease-in-out infinite reverse;
-}
-
-.orb-3 {
-  width: 300px;
-  height: 300px;
-  background: #06b6d4;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  animation: pulse 6s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%, 100% { transform: translate(0, 0); }
-  50% { transform: translate(30px, -30px); }
-}
-
-@keyframes pulse {
-  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.3; }
-  50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.5; }
 }
 
 .settings-header {
@@ -766,55 +702,6 @@ onMounted(loadSettings)
 .test-error-msg svg {
   width: 16px;
   height: 16px;
-}
-
-.bottom-tabs {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 70px;
-  background: rgba(20, 19, 60, 0.4);
-  backdrop-filter: blur(32px) saturate(180%);
-  -webkit-backdrop-filter: blur(32px) saturate(180%);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 24px;
-  padding: 0 24px;
-  padding-bottom: env(safe-area-inset-bottom);
-  z-index: 100;
-  touch-action: none;
-}
-
-.tab-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  padding: 10px 20px;
-  border-radius: 16px;
-  transition: all 0.2s ease;
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.tab-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.tab-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.tab-label {
-  font-size: 12px;
-  font-weight: 600;
 }
 
 @media (max-width: 768px) {

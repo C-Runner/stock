@@ -1,9 +1,6 @@
 <template>
   <div class="ai-analysis">
-    <div class="background">
-      <div class="gradient-orb orb-1"></div>
-      <div class="gradient-orb orb-2"></div>
-    </div>
+    <BackgroundOrbs />
 
     <div class="page-header">
       <button class="back-btn" @click="goBack">
@@ -372,52 +369,20 @@
       </template>
     </n-space>
 
-    <div class="bottom-tabs">
-      <div class="tab-item" @click="router.push('/')">
-        <div class="tab-icon">
-          <n-icon size="22"><IconHome /></n-icon>
-        </div>
-        <span class="tab-label">Portfolio</span>
-      </div>
-      <div class="tab-item" @click="router.push(`/analysis/${code}`)">
-        <div class="tab-icon">
-          <n-icon size="22"><IconChart /></n-icon>
-        </div>
-        <span class="tab-label">Analysis</span>
-      </div>
-      <div class="tab-item primary" @click="router.push('/watchlist')">
-        <div class="tab-icon">
-          <n-icon size="22"><IconStar /></n-icon>
-        </div>
-        <span class="tab-label">Watchlist</span>
-      </div>
-    </div>
+    <BottomTabs :tabs="bottomTabs" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed, shallowRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { marked } from 'marked'
-import { markedHighlight } from 'marked-highlight'
-import hljs from 'highlight.js'
-import 'highlight.js/styles/github-dark.css'
 import {
   NCard, NSpace, NSpin, NAlert, NDivider, NIcon
 } from 'naive-ui'
 import { aiApi, type AIAnalysisReport } from '../api'
 import { IconArrowLeft, IconChart, IconClock, IconLight, IconTrend, IconRobot, IconHome, IconStar } from '../components/icons'
-
-// Configure marked with highlight.js
-marked.use(markedHighlight({
-  langPrefix: 'hljs language-',
-  highlight(code, lang) {
-    if (lang && hljs.getLanguage(lang)) {
-      return hljs.highlight(code, { language: lang }).value
-    }
-    return hljs.highlightAuto(code).value
-  }
-}))
+import BackgroundOrbs from '../components/BackgroundOrbs.vue'
+import BottomTabs from '../components/BottomTabs.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -428,10 +393,38 @@ const loading = ref(true)
 const error = ref('')
 const showRawAnalysis = ref(false)
 
+const markedInstance = shallowRef<any>(null)
+
+const loadMarkdown = async () => {
+  if (markedInstance.value) return
+  const markedModule = await import('marked')
+  const { markedHighlight } = await import('marked-highlight')
+  const hljsModule = await import('highlight.js')
+  const hljs = hljsModule.default
+  await import('highlight.js/styles/github-dark.css')
+  markedModule.marked.use(markedHighlight({
+    langPrefix: 'hljs language-',
+    highlight(code: string, lang: string) {
+      if (lang && hljs.getLanguage(lang)) {
+        return hljs.highlight(code, { language: lang }).value
+      }
+      return hljs.highlightAuto(code).value
+    }
+  }))
+  markedInstance.value = markedModule.marked
+}
+
+const bottomTabs = computed(() => [
+  { icon: IconHome, label: 'Portfolio', action: () => router.push('/') },
+  { icon: IconChart, label: 'Analysis', action: () => router.push(`/analysis/${code}`) },
+  { icon: IconStar, label: 'Watchlist', action: () => router.push('/watchlist'), primary: true }
+])
+
 const fetchAnalysis = async () => {
   loading.value = true
   error.value = ''
   try {
+    await loadMarkdown()
     report.value = await aiApi.getAnalysis(code)
   } catch (e: any) {
     error.value = e.message || 'Failed to load AI analysis'
@@ -463,14 +456,15 @@ const getAdviceClass = (riskLevel: string) => {
 }
 
 const renderMarkdown = (text: string): string => {
-  if (!text) return ''
-  // Strip paragraph tags: <p>content</p> -> content
+  if (!text || !markedInstance.value) return ''
   text = text.replace(/<\/?p[^>]*>/gi, '')
-  // Fix markdown headers: add space after # so marked can parse them
-  // #一 -> # 一, ###标题 -> ### 标题, etc.
   text = text.replace(/(#{1,6})([^\s])/g, '$1 $2')
-  // Parse with marked, using breaks for proper line handling
-  return marked.parse(text, { breaks: true }) as string
+  text = text.replace(/^\*\*\*\*\*分析报告\s*$/gm, '')
+  text = text.replace(/^\*\*\*\*\*\s*$/gm, '')
+  text = text.replace(/^\*\*\*技术分析报告\s*$/gm, '')
+  text = text.replace(/^\*\*\*\s*技术分析报告\s*$/gm, '')
+  const result = markedInstance.value.parse(text, { breaks: true }) as string
+  return result.replace(/<h([1-6])>(#+\s*)/g, '<h$1>')
 }
 
 onMounted(fetchAnalysis)
@@ -496,43 +490,6 @@ onMounted(fetchAnalysis)
   touch-action: pan-y;
 }
 
-.background {
-  position: fixed;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.gradient-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.4;
-}
-
-.orb-1 {
-  width: 500px;
-  height: 500px;
-  background: #6366f1;
-  top: -150px;
-  left: -100px;
-  animation: float 8s ease-in-out infinite;
-}
-
-.orb-2 {
-  width: 400px;
-  height: 400px;
-  background: #8b5cf6;
-  bottom: -100px;
-  right: -100px;
-  animation: float 10s ease-in-out infinite reverse;
-}
-
-@keyframes float {
-  0%, 100% { transform: translate(0, 0); }
-  50% { transform: translate(30px, -30px); }
-}
-
 .content {
   position: relative;
   align-items: stretch;
@@ -542,54 +499,6 @@ onMounted(fetchAnalysis)
 .content > * {
   flex-shrink: 0;
   margin-bottom: 0 !important;
-}
-
-.page-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 12px;
-  position: relative;
-  flex: 0 0 auto;
-}
-
-.back-btn {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  cursor: pointer;
-  color: rgba(255, 255, 255, 0.8);
-  transition: all 0.2s ease;
-}
-
-.back-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.15);
-}
-
-.header-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.page-title {
-  margin: 0;
-  font-size: 26px;
-  font-weight: 600;
-  color: #fff;
-  letter-spacing: -0.5px;
-}
-
-.subtitle {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 14px;
 }
 
 .cache-notice {
@@ -630,126 +539,6 @@ onMounted(fetchAnalysis)
   line-height: 1.7;
   color: rgba(255, 255, 255, 0.85);
   padding: 8px 0;
-}
-
-.analysis-card {
-  --n-border-radius: 20px !important;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.05) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  backdrop-filter: blur(20px);
-  transition: all 0.3s ease;
-  padding: 0 !important;
-  margin: 0 !important;
-  position: relative !important;
-  overflow: visible !important;
-  display: block !important;
-}
-
-.analysis-card::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: 21px;
-  padding: 1px;
-  background: linear-gradient(
-    135deg,
-    rgba(99, 102, 241, 0.3),
-    rgba(139, 92, 246, 0.1) 40%,
-    rgba(139, 92, 246, 0.1) 60%,
-    rgba(99, 102, 241, 0.3)
-  );
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.analysis-card:hover::before {
-  opacity: 1;
-}
-
-.analysis-card > * {
-  box-sizing: border-box;
-}
-
-.analysis-card :deep(.n-base-card) {
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  border-radius: inherit !important;
-  overflow: visible !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.analysis-card :deep(.n-card) {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  border-radius: 20px !important;
-  overflow: visible !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.analysis-card :deep(.n-card__content),
-.analysis-card :deep(.n-card-body),
-.analysis-card :deep(.n-card-content) {
-  padding: 16px !important;
-  margin: 0 !important;
-  border-radius: inherit !important;
-}
-
-.analysis-card :deep(.n-card__footer),
-.analysis-card :deep(.n-card-footer) {
-  display: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  min-height: 0 !important;
-  height: 0 !important;
-  border: none !important;
-}
-
-.analysis-card :deep(.n-base-segments),
-.analysis-card :deep(.n-card__border) {
-  display: none !important;
-}
-
-.analysis-card :deep(.n-card-header) {
-  background: transparent !important;
-  border: none !important;
-  padding: 16px 20px !important;
-  margin: 0 !important;
-  border-radius: inherit !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
-}
-
-.analysis-card :deep(.n-card-wrapper) {
-  margin: 0 !important;
-  padding: 0 !important;
-  border-radius: inherit !important;
-}
-
-.analysis-card:hover {
-  border-color: rgba(255, 255, 255, 0.15) !important;
-  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.15) !important;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 600;
-  font-size: 16px;
-  color: #fff;
-}
-
-.card-header :deep(.n-icon) {
-  color: #6366f1 !important;
 }
 
 .toggle-btn {
@@ -1370,6 +1159,9 @@ onMounted(fetchAnalysis)
   font-size: 13px;
   color: rgba(255, 255, 255, 0.8);
   line-height: 1.6;
+  word-break: break-all;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 /* Investment Advice Styles */
@@ -1516,66 +1308,6 @@ onMounted(fetchAnalysis)
   font-size: 11px;
   font-weight: 700;
   flex-shrink: 0;
-}
-
-.bottom-tabs {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 70px;
-  background: rgba(20, 19, 60, 0.4);
-  backdrop-filter: blur(32px) saturate(180%);
-  -webkit-backdrop-filter: blur(32px) saturate(180%);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 24px;
-  padding: 0 24px;
-  padding-bottom: env(safe-area-inset-bottom);
-  z-index: 100;
-  touch-action: none;
-}
-
-.tab-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  padding: 10px 20px;
-  border-radius: 16px;
-  transition: all 0.2s ease;
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.tab-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.tab-item.primary {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: #fff;
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
-}
-
-.tab-item.primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.5);
-}
-
-.tab-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.tab-label {
-  font-size: 12px;
-  font-weight: 600;
 }
 
 @media (max-width: 768px) {

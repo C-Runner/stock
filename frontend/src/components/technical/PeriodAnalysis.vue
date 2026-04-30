@@ -39,17 +39,13 @@
 import { NCard, NIcon } from 'naive-ui'
 import { IconTrend } from '../icons'
 import type { TechnicalAnalysis } from '../../api'
+import { getLatestValue } from '../../utils/technical'
 
 interface Props {
   technical: TechnicalAnalysis
 }
 
 const props = defineProps<Props>()
-
-const getLatestValue = (values: number[]): number => {
-  if (!values || values.length === 0) return 0
-  return values[values.length - 1] ?? 0
-}
 
 const getShortTermMA = () => props.technical.ma.filter(m => m.period === 5) || []
 const getShortTermRSI = () => props.technical.rsi.filter(r => r.period === 6) || []

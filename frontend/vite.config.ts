@@ -17,4 +17,15 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'naive-ui': ['naive-ui'],
+          'echarts': ['echarts'],
+          'markdown': ['marked', 'marked-highlight', 'highlight.js'],
+        }
+      }
+    }
+  }
 })

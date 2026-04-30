@@ -1,9 +1,6 @@
 <template>
   <div class="analysis">
-    <div class="background">
-      <div class="gradient-orb orb-1"></div>
-      <div class="gradient-orb orb-2"></div>
-    </div>
+    <BackgroundOrbs />
 
     <div class="page-header">
       <div class="header-info">
@@ -36,7 +33,7 @@
             </div>
             <span class="action-label">AI</span>
           </div>
-          <div class="action-item" @click="scrollToTechnical">
+          <div class="action-item" @click="navigateToTechnical">
             <div class="action-icon tech">
               <n-icon size="24"><IconTrend /></n-icon>
             </div>
@@ -310,25 +307,12 @@
       </n-card>
     </n-space>
 
-    <div class="bottom-tabs">
-      <div class="tab-item" @click="router.push('/')">
-        <div class="tab-icon">
-          <n-icon size="22"><IconHome /></n-icon>
-        </div>
-        <span class="tab-label">Portfolio</span>
-      </div>
-      <div class="tab-item primary" @click="router.push('/watchlist')">
-        <div class="tab-icon">
-          <n-icon size="22"><IconStar /></n-icon>
-        </div>
-        <span class="tab-label">Watchlist</span>
-      </div>
-    </div>
+    <BottomTabs :tabs="bottomTabs" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   NCard, NSpace, NSpin, NAlert,
@@ -337,7 +321,10 @@ import {
 import { stockApi, type StockAnalysis, type StockQuote, type TechnicalAnalysis } from '../api'
 import { IconWallet, IconTrend, IconClock, IconChart, IconHome, IconStar, IconRobot } from '../components/icons'
 import { formatVolume, formatAmount } from '../utils/format'
+import { getLatestValue, getRSIClass, getKDJClass, getWRClass } from '../utils/technical'
 import KLineChart from '../components/KLineChart.vue'
+import BackgroundOrbs from '../components/BackgroundOrbs.vue'
+import BottomTabs from '../components/BottomTabs.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -345,7 +332,7 @@ const router = useRouter()
 const stockCode = ref(route.params.code as string)
 const loading = ref(false)
 
-const scrollToTechnical = () => {
+const navigateToTechnical = () => {
   router.push(`/technical/${stockCode.value}`)
 }
 
@@ -357,28 +344,10 @@ const technical = ref<TechnicalAnalysis | null>(null)
 const techLoading = ref(false)
 const techError = ref('')
 
-const getLatestValue = (values: number[]): number => {
-  if (!values || values.length === 0) return 0
-  return values[values.length - 1] ?? 0
-}
-
-const getRSIClass = (rsi: number): string => {
-  if (rsi > 70) return 'overbought'
-  if (rsi < 30) return 'oversold'
-  return ''
-}
-
-const getKDJClass = (value: number): string => {
-  if (value > 80) return 'overbought'
-  if (value < 20) return 'oversold'
-  return ''
-}
-
-const getWRClass = (wr: number): string => {
-  if (wr > -20) return 'overbought'
-  if (wr < -80) return 'oversold'
-  return ''
-}
+const bottomTabs = computed(() => [
+  { icon: IconHome, label: 'Portfolio', action: () => router.push('/') },
+  { icon: IconStar, label: 'Watchlist', action: () => router.push('/watchlist'), primary: true }
+])
 
 const fetchAnalysis = async () => {
   loading.value = true
@@ -504,43 +473,6 @@ onMounted(() => {
   touch-action: pan-y;
 }
 
-.background {
-  position: fixed;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.gradient-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.4;
-}
-
-.orb-1 {
-  width: 500px;
-  height: 500px;
-  background: #6366f1;
-  top: -150px;
-  left: -100px;
-  animation: float 8s ease-in-out infinite;
-}
-
-.orb-2 {
-  width: 400px;
-  height: 400px;
-  background: #8b5cf6;
-  bottom: -100px;
-  right: -100px;
-  animation: float 10s ease-in-out infinite reverse;
-}
-
-@keyframes float {
-  0%, 100% { transform: translate(0, 0); }
-  50% { transform: translate(30px, -30px); }
-}
-
 .content {
   position: relative;
   align-items: stretch;
@@ -550,35 +482,6 @@ onMounted(() => {
 .content > * {
   flex-shrink: 0;
   margin-bottom: 0 !important;
-}
-
-.page-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 12px;
-  position: relative;
-  flex: 0 0 auto;
-}
-
-.header-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.page-title {
-  margin: 0;
-  font-size: 26px;
-  font-weight: 600;
-  color: #fff;
-  letter-spacing: -0.5px;
-}
-
-.subtitle {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 14px;
 }
 
 .stock-header {
@@ -600,51 +503,6 @@ onMounted(() => {
   box-shadow: 0 8px 32px rgba(99, 102, 241, 0.15);
 }
 
-.back-btn {
-  color: rgba(255, 255, 255, 0.8) !important;
-}
-
-.stock-info {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.logo {
-  width: 44px;
-  height: 44px;
-  padding: 8px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.logo svg {
-  width: 100%;
-  height: 100%;
-  color: #fff;
-}
-
-.stock-text {
-  display: flex;
-  flex-direction: column;
-}
-
-.stock-name {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 600;
-  color: #fff;
-}
-
-.stock-code {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.5);
-}
-
 .stock-price {
   text-align: right;
 }
@@ -664,149 +522,6 @@ onMounted(() => {
   background: rgba(255, 255, 255, 0.08);
   font-weight: 500;
   backdrop-filter: blur(4px);
-}
-
-.analysis-card {
-  --n-border-radius: 20px !important;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.05) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  backdrop-filter: blur(20px);
-  transition: all 0.3s ease;
-  padding: 0 !important;
-  margin: 0 !important;
-  position: relative !important;
-  overflow: visible !important;
-  display: block !important;
-}
-
-.analysis-card::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: 21px;
-  padding: 1px;
-  background: linear-gradient(
-    135deg,
-    rgba(99, 102, 241, 0.3),
-    rgba(139, 92, 246, 0.1) 40%,
-    rgba(139, 92, 246, 0.1) 60%,
-    rgba(99, 102, 241, 0.3)
-  );
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.analysis-card:hover::before {
-  opacity: 1;
-}
-
-.analysis-card > * {
-  box-sizing: border-box;
-}
-
-.analysis-card :deep(.n-base-card) {
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  border-radius: inherit !important;
-  overflow: visible !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.analysis-card :deep(.n-card) {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  border-radius: 20px !important;
-  overflow: visible !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.analysis-card :deep(.n-card__content),
-.analysis-card :deep(.n-card-body),
-.analysis-card :deep(.n-card-content) {
-  padding: 16px !important;
-  margin: 0 !important;
-  border-radius: inherit !important;
-}
-
-.analysis-card :deep(.n-card__footer),
-.analysis-card :deep(.n-card-footer) {
-  display: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  min-height: 0 !important;
-  height: 0 !important;
-  border: none !important;
-}
-
-.analysis-card :deep(.n-base-segments),
-.analysis-card :deep(.n-card__border) {
-  display: none !important;
-}
-
-.analysis-card :deep(.n-card-header) {
-  background: transparent !important;
-  border: none !important;
-  padding: 16px 20px !important;
-  margin: 0 !important;
-  border-radius: inherit !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
-}
-
-.analysis-card :deep(.n-card-wrapper) {
-  margin: 0 !important;
-  padding: 0 !important;
-  border-radius: inherit !important;
-}
-
-.analysis-card :deep(.n-base-card) {
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  border-radius: inherit !important;
-  overflow: visible !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.analysis-card :deep(.n-card__content) {
-  flex: 0 auto !important;
-  min-height: 0 !important;
-  box-sizing: border-box;
-  height: fit-content !important;
-  overflow: visible !important;
-}
-
-.analysis-card:last-of-type {
-  margin-bottom: 0 !important;
-}
-
-.analysis-card:hover {
-  border-color: rgba(255, 255, 255, 0.15) !important;
-  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.15) !important;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 600;
-  font-size: 16px;
-  color: #fff;
-}
-
-.card-header :deep(.n-icon) {
-  color: #6366f1 !important;
 }
 
 .no-position {
@@ -1075,24 +790,6 @@ onMounted(() => {
   color: rgba(255, 255, 255, 0.6);
 }
 
-.up {
-  color: #ff6b6b;
-}
-
-.down {
-  color: #38ef7d;
-}
-
-.overbought {
-  color: #ff6b6b;
-  font-weight: bold;
-}
-
-.oversold {
-  color: #38ef7d;
-  font-weight: bold;
-}
-
 @media (max-width: 768px) {
   .analysis {
     padding: 12px;
@@ -1250,65 +947,4 @@ onMounted(() => {
   }
 }
 
-.bottom-tabs {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 70px;
-  background: rgba(20, 19, 60, 0.4);
-  backdrop-filter: blur(32px) saturate(180%);
-  -webkit-backdrop-filter: blur(32px) saturate(180%);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 24px;
-  padding: 0 24px;
-  padding-bottom: env(safe-area-inset-bottom);
-  z-index: 100;
-  touch-action: none;
-}
-
-.tab-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  padding: 10px 20px;
-  border-radius: 16px;
-  transition: all 0.2s ease;
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.tab-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.tab-item.primary {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: #fff;
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
-}
-
-.tab-item.primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.5);
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: #fff;
-}
-
-.tab-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.tab-label {
-  font-size: 12px;
-  font-weight: 600;
-}
 </style>
