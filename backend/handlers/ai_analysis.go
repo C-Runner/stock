@@ -42,6 +42,9 @@ func GetAIAnalysis(c *gin.Context) {
 		klines = nil // Continue without historical data
 	}
 
+	// Get news sentiment data
+	newsData := prepareNewsData(code)
+
 	// Build AI input - use *models.StockQuote which is aliased to services.StockQuote
 	input := &services.AIAnalysisInput{
 		Code:           code,
@@ -49,6 +52,7 @@ func GetAIAnalysis(c *gin.Context) {
 		Quote:          (*services.StockQuote)(quote),
 		Technical:      techAnalysis,
 		HistoricalData: klines,
+		NewsData:       newsData,
 	}
 
 	// Get AI analysis (from cache or generate)
@@ -60,4 +64,38 @@ func GetAIAnalysis(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, report)
+}
+
+// prepareNewsData fetches and prepares news sentiment for AI
+func prepareNewsData(code string) *services.NewsSentimentData {
+	result, err := services.GetNewsForStock(code)
+	if err != nil {
+		return nil
+	}
+
+	newsItems, err := services.GetRecentNewsFromDB(code, 5)
+	if err != nil {
+		return nil
+	}
+
+	var recentNews []services.NewsSummary
+	for _, item := range newsItems {
+		if item.PublishTime.IsZero() {
+			continue
+		}
+		recentNews = append(recentNews, services.NewsSummary{
+			Title:       item.Title,
+			PublishTime: item.PublishTime.Format("2006-01-02 15:04"),
+			Sentiment:   item.Sentiment,
+		})
+	}
+
+	return &services.NewsSentimentData{
+		OverallScore:   result.OverallScore,
+		PositiveCount:  result.PositiveCount,
+		NeutralCount:   result.NeutralCount,
+		NegativeCount:  result.NegativeCount,
+		LatestNewsTime: result.LatestNewsTime,
+		RecentNews:     recentNews,
+	}
 }

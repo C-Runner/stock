@@ -149,3 +149,32 @@ type AISettings struct {
 func (AISettings) TableName() string {
 	return "ai_settings"
 }
+
+// NewsItem represents a stock-related news article
+type NewsItem struct {
+	ID            uint      `json:"id" gorm:"primaryKey;autoIncrement"`
+	StockCode     string    `json:"stockCode" gorm:"column:stock_code;index;size:20"`
+	Title         string    `json:"title" gorm:"column:title;size:500"`
+	Content       string    `json:"content" gorm:"column:content;type:text"`
+	Source        string    `json:"source" gorm:"column:source;size:100"`
+	SourceURL     string    `json:"sourceUrl" gorm:"column:source_url;size:500"`
+	PublishTime   time.Time `json:"publishTime" gorm:"column:publish_time;index"`
+	Sentiment     string    `json:"sentiment" gorm:"column:sentiment;size:20"`
+	SentimentScore float64  `json:"sentimentScore" gorm:"column:sentiment_score"`
+	CreatedAt     time.Time `json:"createdAt" gorm:"column:created_at"`
+}
+
+func (NewsItem) TableName() string {
+	return "news_items"
+}
+
+// NewsSentimentResult holds aggregated news sentiment for a stock
+type NewsSentimentResult struct {
+	StockCode      string  `json:"stockCode"`
+	OverallScore   float64 `json:"overallScore"`
+	PositiveCount  int     `json:"positiveCount"`
+	NeutralCount   int     `json:"neutralCount"`
+	NegativeCount  int     `json:"negativeCount"`
+	LatestNewsTime string  `json:"latestNewsTime"`
+	NewsCount      int     `json:"newsCount"`
+}

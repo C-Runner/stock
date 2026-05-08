@@ -119,6 +119,23 @@ type InvestmentAdvice struct {
 	RiskWarnings       []string `json:"riskWarnings"`      // Key risk warnings for investors
 }
 
+// NewsSentimentData contains news sentiment info for AI analysis
+type NewsSentimentData struct {
+	OverallScore   float64 `json:"overallScore"`   // -100 to 100
+	PositiveCount  int     `json:"positiveCount"`
+	NeutralCount   int     `json:"neutralCount"`
+	NegativeCount  int     `json:"negativeCount"`
+	LatestNewsTime string  `json:"latestNewsTime"`
+	RecentNews     []NewsSummary `json:"recentNews"`
+}
+
+// NewsSummary is a brief news item for AI prompt
+type NewsSummary struct {
+	Title       string `json:"title"`
+	PublishTime string `json:"publishTime"`
+	Sentiment   string `json:"sentiment"`
+}
+
 // AIAnalysisInput is the input data for AI analysis
 type AIAnalysisInput struct {
 	Code           string
@@ -126,6 +143,7 @@ type AIAnalysisInput struct {
 	Quote          *StockQuote
 	Technical      *TechnicalAnalysis
 	HistoricalData []KLine // Full historical data for pattern matching
+	NewsData       *NewsSentimentData
 }
 
 // StockQuote is an alias for models.StockQuote for convenience

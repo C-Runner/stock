@@ -12,39 +12,46 @@
       </div>
     </div>
 
-    <n-space vertical :size="12" class="content" :style="{ width: '100%' }">
-      <n-spin v-if="loading" show description="Generating AI analysis..." />
-      <n-alert v-else-if="error" type="error">{{ error }}</n-alert>
+    <n-tabs type="segment" class="content-tabs" :value="activeTab" @update:value="activeTab = $event">
+      <n-tab-pane name="analysis" tab="Analysis">
+        <n-space vertical :size="12" class="content" :style="{ width: '100%' }">
+          <n-spin v-if="loading" show description="Generating AI analysis..." />
+          <n-alert v-else-if="error" type="error">{{ error }}</n-alert>
 
-      <template v-else-if="report">
-        <!-- Heuristic Mode Notice -->
-        <div v-if="report.analysisMethod === 'heuristic'" class="heuristic-notice">
-          <n-icon size="16"><IconLight /></n-icon>
-          <span>Algorithm analysis (AI not configured)</span>
-        </div>
+          <template v-else-if="report">
+            <!-- Heuristic Mode Notice -->
+            <div v-if="report.analysisMethod === 'heuristic'" class="heuristic-notice">
+              <n-icon size="16"><IconLight /></n-icon>
+              <span>Algorithm analysis (AI not configured)</span>
+            </div>
 
-        <!-- Cache Notice -->
-        <div v-else-if="report.fromCache" class="cache-notice">
-          <n-icon size="16"><IconClock /></n-icon>
-          <span>Cached result (refreshes every 5 minutes)</span>
-        </div>
+            <!-- Cache Notice -->
+            <div v-else-if="report.fromCache" class="cache-notice">
+              <n-icon size="16"><IconClock /></n-icon>
+              <span>Cached result (refreshes every 5 minutes)</span>
+            </div>
 
-        <!-- AI Analysis Card -->
-        <n-card v-if="report.rawAnalysis" class="analysis-card raw-analysis-card" :bordered="false" :content-style="{ padding: '20px' }" :header-style="{ padding: '16px 20px', borderBottom: 'none' }" :shadow="false">
-          <template #header>
-            <div class="card-header">
-              <n-icon size="20"><IconRobot /></n-icon>
-              <span>AI Analysis</span>
+            <!-- AI Analysis Card -->
+            <n-card v-if="report.rawAnalysis" class="analysis-card raw-analysis-card" :bordered="false" :content-style="{ padding: '20px' }" :header-style="{ padding: '16px 20px', borderBottom: 'none' }" :shadow="false">
+              <template #header>
+                <div class="card-header">
+                  <n-icon size="20"><IconRobot /></n-icon>
+                  <span>AI Analysis</span>
+                </div>
+              </template>
+              <div class="raw-analysis-content" v-html="renderMarkdown(report.rawAnalysis)"></div>
+            </n-card>
+
+            <div class="generated-at">
+              Generated at: {{ report.generatedAt }}
             </div>
           </template>
-          <div class="raw-analysis-content" v-html="renderMarkdown(report.rawAnalysis)"></div>
-        </n-card>
-
-        <div class="generated-at">
-          Generated at: {{ report.generatedAt }}
-        </div>
-      </template>
-    </n-space>
+        </n-space>
+      </n-tab-pane>
+      <n-tab-pane name="news" tab="News">
+        <StockNews :code="code" />
+      </n-tab-pane>
+    </n-tabs>
 
   </div>
 </template>
@@ -53,11 +60,12 @@
 import { ref, onMounted, shallowRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
-  NCard, NSpace, NSpin, NAlert, NIcon
+  NCard, NSpace, NSpin, NAlert, NIcon, NTabs, NTabPane
 } from 'naive-ui'
 import { aiApi, type AIAnalysisReport } from '../api'
 import { IconArrowLeft, IconClock, IconLight, IconRobot } from '../components/icons'
 import BackgroundOrbs from '../components/BackgroundOrbs.vue'
+import StockNews from '../components/StockNews.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -66,6 +74,7 @@ const code = route.params.code as string
 const report = ref<AIAnalysisReport | null>(null)
 const loading = ref(true)
 const error = ref('')
+const activeTab = ref('analysis')
 
 const markedInstance = shallowRef<any>(null)
 
@@ -357,5 +366,19 @@ onMounted(fetchAnalysis)
     padding: 12px;
     padding-bottom: calc(80px + env(safe-area-inset-bottom));
   }
+}
+
+.content-tabs {
+  margin-top: 12px;
+}
+
+.content-tabs :deep(.n-tabs-nav) {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 4px;
+}
+
+.content-tabs :deep(.n-tab-pane) {
+  padding: 0;
 }
 </style>

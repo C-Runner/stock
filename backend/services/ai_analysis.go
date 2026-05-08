@@ -627,7 +627,7 @@ func (s *AIAnalysisService) parseMiniMaxAnthropicResponse(body []byte) (string, 
 
 // buildAnalysisPrompt constructs the prompt for AI analysis
 func (s *AIAnalysisService) buildAnalysisPrompt(input *AIAnalysisInput, techData map[string]interface{}) string {
-	return fmt.Sprintf(`请分析股票 %s (%s) 的投资价值。
+	prompt := fmt.Sprintf(`请分析股票 %s (%s) 的投资价值。
 
 股票行情：
 - 当前价：%.2f
@@ -643,13 +643,48 @@ func (s *AIAnalysisService) buildAnalysisPrompt(input *AIAnalysisInput, techData
 - KDJ状态：%v
 - BOLL状态：%v
 - 成交量分析：%v
-- 形态信号：%v
-
-请用自然语言输出详细分析，直接给出结论，不需要JSON格式。用中文输出。`, input.Code, input.Name,
+- 形态信号：%v`, input.Code, input.Name,
 		input.Quote.Current, input.Quote.Open, input.Quote.High, input.Quote.Low, input.Quote.Volume,
 		techData["maStatus"], techData["rsiStatus"], techData["macdStatus"],
 		techData["kdjStatus"], techData["bollStatus"], techData["volumeAnalysis"],
 		techData["patterns"])
+
+	// Add news sentiment if available
+	if input.NewsData != nil {
+		prompt += fmt.Sprintf(`
+
+新闻舆情（最近资讯）：
+- 情感评分：%.1f（-100极负面，+100极正面）
+- 正面新闻：%d篇
+- 中性新闻：%d篇
+- 负面新闻：%d篇
+- 最新资讯时间：%s`,
+			input.NewsData.OverallScore,
+			input.NewsData.PositiveCount,
+			input.NewsData.NeutralCount,
+			input.NewsData.NegativeCount,
+			input.NewsData.LatestNewsTime,
+		)
+
+		if len(input.NewsData.RecentNews) > 0 {
+			prompt += "\n\n近期新闻标题："
+			for _, news := range input.NewsData.RecentNews {
+				sentimentTag := ""
+				if news.Sentiment == "positive" {
+					sentimentTag = "[正面]"
+				} else if news.Sentiment == "negative" {
+					sentimentTag = "[负面]"
+				} else {
+					sentimentTag = "[中性]"
+				}
+				prompt += fmt.Sprintf("\n- %s %s (%s)", sentimentTag, news.Title, news.PublishTime)
+			}
+		}
+	}
+
+	prompt += "\n\n请用自然语言输出详细分析，直接给出结论，不需要JSON格式。用中文输出。"
+
+	return prompt
 }
 
 // generateHeuristicAnalysis generates analysis without AI (fallback)
@@ -673,11 +708,38 @@ func (s *AIAnalysisService) generateHeuristicAnalysis(input *AIAnalysisInput, te
 	}
 
 	report.Scores.MoneyFlow = s.calculateMoneyFlowScore(techData)
-	report.Scores.NewsSentiment = DimensionScore{
-		Score:   50 + float64(s.randInt(0, 30)),
-		Trend:   "stable",
-		Summary: "News sentiment analysis unavailable",
-		Factors: []string{"Limited news data"},
+
+	// Use real news sentiment if available
+	if input.NewsData != nil {
+		newsScore := 50 + input.NewsData.OverallScore/2 // Convert -100..100 to 0..100
+		if newsScore < 0 {
+			newsScore = 0
+		} else if newsScore > 100 {
+			newsScore = 100
+		}
+		trend := "stable"
+		if input.NewsData.OverallScore > 20 {
+			trend = "improving"
+		} else if input.NewsData.OverallScore < -20 {
+			trend = "declining"
+		}
+		report.Scores.NewsSentiment = DimensionScore{
+			Score:   newsScore,
+			Trend:   trend,
+			Summary: fmt.Sprintf("News sentiment: %.0f%% positive", input.NewsData.OverallScore+50),
+			Factors: []string{
+				fmt.Sprintf("%d positive news", input.NewsData.PositiveCount),
+				fmt.Sprintf("%d neutral news", input.NewsData.NeutralCount),
+				fmt.Sprintf("%d negative news", input.NewsData.NegativeCount),
+			},
+		}
+	} else {
+		report.Scores.NewsSentiment = DimensionScore{
+			Score:   50 + float64(s.randInt(0, 30)),
+			Trend:   "stable",
+			Summary: "News sentiment analysis unavailable",
+			Factors: []string{"Limited news data"},
+		}
 	}
 
 	// Calculate composite score (30% tech, 30% fundamental, 25% money, 15% news)

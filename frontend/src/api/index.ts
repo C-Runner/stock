@@ -455,3 +455,39 @@ export const settingsApi = {
   updateAISettings: (settings: AISettingsRequest) => api.put<AISettingsResponse>('/api/settings/ai', settings),
   testAISettings: () => api.post<{ success: boolean; error?: string; message?: string; aiResponse?: string; model?: string; statusCode?: number; responseTime?: string }>('/api/settings/ai/test', {})
 }
+
+// News types
+export interface NewsItem {
+  id: number
+  stockCode: string
+  title: string
+  content: string
+  source: string
+  sourceUrl: string
+  publishTime: string
+  sentiment: 'positive' | 'neutral' | 'negative'
+  sentimentScore: number
+}
+
+export interface NewsSentimentResult {
+  stockCode: string
+  overallScore: number
+  positiveCount: number
+  neutralCount: number
+  negativeCount: number
+  latestNewsTime: string
+  newsCount: number
+}
+
+export interface NewsResponse {
+  code: string
+  count: number
+  newsItems: NewsItem[]
+}
+
+export const newsApi = {
+  getNews: (code: string, limit = 20) =>
+    api.get<NewsResponse>(`/api/stocks/news/${code}?limit=${limit}`),
+  getSentiment: (code: string) =>
+    api.get<NewsSentimentResult>(`/api/stocks/news-sentiment/${code}`)
+}

@@ -41,7 +41,17 @@
       "Bash(pkill -f \"go run main.go\")",
       "Bash(go run *)",
       "Bash(kill 216045)",
-      "Bash(xargs kill *)"
+      "Bash(xargs kill *)",
+      "Bash(curl -s 'https://np-listapi.eastmoney.com/comm/web/getNPqbbListV2?client=web&nstockCode=600519&biz=web_zhengqtan_Articlelist&order=0&pageIndex=1&pageSize=20' -H 'User-Agent: Mozilla/5.0' -H 'Referer: https://finance.eastmoney.com/')",
+      "Bash(curl -s 'https://feed.mix.sina.com.cn/api/roll/get?pageid=153&lid=2516&k=600519&num=10&page=1' -H 'User-Agent: Mozilla/5.0' -H 'Referer: https://finance.sina.com.cn/')",
+      "Bash(curl -s 'https://finance.qq.com/act/3v1/stocknews/list?hostid=6&tag=&type=0&range=day&page=0&count=20&code=sh600519' -H 'User-Agent: Mozilla/5.0')",
+      "Bash(curl -s 'https://np-anotice-stock.eastmoney.com/api/security/ann?sr=-1&page_size=20&page_index=1&ann_type=SHA,CYB,SZA&client_source=web&stock_list=600519' -H 'User-Agent: Mozilla/5.0' -H 'Referer: https://data.eastmoney.com/')",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('data',{}\\).get\\('list',[]\\), indent=2, ensure_ascii=False\\)\\)\")",
+      "Bash(curl -s \"http://localhost:8080/api/login\" -H \"Content-Type: application/json\" -d '{\"username\":\"admin\",\"password\":\"admin123\"}')",
+      "Bash(python3 -m json.tool)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('Analysis Method:', d.get\\('analysisMethod'\\)\\); print\\('News Sentiment Score:', d.get\\('scores',{}\\).get\\('newsSentiment',{}\\).get\\('score'\\)\\); print\\('News Sentiment Summary:', d.get\\('scores',{}\\).get\\('newsSentiment',{}\\).get\\('summary'\\)\\)\")",
+      "Bash(curl -s http://localhost:8080/api/stocks/news-sentiment/sh600519 -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(grep -E 'Sprintf|Format.*%s|Replace.*\\\\$')"
     ]
   }
 }

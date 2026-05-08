@@ -28,7 +28,7 @@ func main() {
 		log.Printf("Warning: Failed to connect to PostgreSQL: %v", err)
 	} else {
 		defer config.DisconnectPostgres()
-		config.DB.AutoMigrate(&models.User{}, &models.Stock{}, &models.WatchlistItem{}, &models.UserWatchlist{}, &models.StockDailySnapshot{}, &models.AISettings{})
+		config.DB.AutoMigrate(&models.User{}, &models.Stock{}, &models.WatchlistItem{}, &models.UserWatchlist{}, &models.StockDailySnapshot{}, &models.AISettings{}, &models.NewsItem{})
 		if err := config.MigrateDB(); err != nil {
 			log.Printf("Warning: Migration failed: %v", err)
 		}
@@ -120,6 +120,8 @@ func main() {
 
 		// AI Analysis
 		protected.GET("/stocks/ai-analysis/:code", handlers.GetAIAnalysis)
+		protected.GET("/stocks/news/:code", handlers.GetStockNews)
+		protected.GET("/stocks/news-sentiment/:code", handlers.GetNewsSentiment)
 		protected.GET("/settings/ai", handlers.GetAISettings)
 		protected.PUT("/settings/ai", handlers.UpdateAISettings)
 		protected.POST("/settings/ai/test", handlers.TestAISettings)
