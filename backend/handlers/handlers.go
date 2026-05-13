@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"time"
 
@@ -42,8 +43,10 @@ func NotFound(c *gin.Context) {
 
 func GetStocks(c *gin.Context) {
 	userID := getUserID(c)
+	log.Printf("GetStocks called by user %s", userID)
 	var stocks []models.Stock
 	if err := config.DB.Where("user_id = ?", userID).Find(&stocks).Error; err != nil {
+		log.Printf("GetStocks: failed to fetch stocks for user %s: %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -57,6 +60,7 @@ func GetStocks(c *gin.Context) {
 
 func CreateStock(c *gin.Context) {
 	userID := getUserID(c)
+	log.Printf("CreateStock called by user %s", userID)
 	var req models.StockRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -81,6 +85,7 @@ func CreateStock(c *gin.Context) {
 	}
 
 	if err := config.DB.Create(&stock).Error; err != nil {
+		log.Printf("CreateStock: failed to create stock %s for user %s: %v", req.Code, userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -97,6 +102,7 @@ func CreateStock(c *gin.Context) {
 		config.DB.Create(&wlItem)
 	}
 
+	log.Printf("CreateStock: successfully created stock %s for user %s", req.Code, userID)
 	c.JSON(http.StatusCreated, stock)
 }
 
@@ -142,8 +148,10 @@ func DeleteStock(c *gin.Context) {
 		return
 	}
 
+	log.Printf("DeleteStock called: user %s, code %s", userID, code)
 	result := config.DB.Where("code = ? AND user_id = ?", code, userID).Delete(&models.Stock{})
 	if result.Error != nil {
+		log.Printf("DeleteStock: failed to delete stock %s for user %s: %v", code, userID, result.Error)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
 		return
 	}
@@ -153,5 +161,6 @@ func DeleteStock(c *gin.Context) {
 		return
 	}
 
+	log.Printf("DeleteStock: successfully deleted stock %s for user %s", code, userID)
 	c.JSON(http.StatusOK, gin.H{"message": "Stock deleted successfully"})
 }

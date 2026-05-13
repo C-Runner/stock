@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"time"
 
@@ -124,14 +125,17 @@ func SearchStocks(c *gin.Context) {
 		return
 	}
 
+	log.Printf("SearchStocks: query=%s", query)
 	quote, err := services.SinaFinanceAPI(query)
 	if err == nil && quote.Name != "" {
+		log.Printf("SearchStocks: found stock via Sina API: %s (%s)", quote.Name, quote.Code)
 		c.JSON(http.StatusOK, []models.StockQuote{*quote})
 		return
 	}
 
 	var stocks []models.Stock
 	if err := config.DB.Where("code ILIKE ?", query+"%").Or("name ILIKE ?", "%"+query+"%").Find(&stocks).Error; err != nil {
+		log.Printf("SearchStocks: database query failed for %s: %v", query, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -140,5 +144,6 @@ func SearchStocks(c *gin.Context) {
 		stocks = []models.Stock{}
 	}
 
+	log.Printf("SearchStocks: found %d stocks from database for query %s", len(stocks), query)
 	c.JSON(http.StatusOK, stocks)
 }

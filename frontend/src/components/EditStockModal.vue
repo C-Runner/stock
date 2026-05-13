@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { NModal, NForm, NFormItem, NInput, NInputNumber, NButton } from 'naive-ui'
+import { ref, watch } from 'vue'
+import { NModal, NForm, NFormItem, NInput, NInputNumber, NButton, useMessage } from 'naive-ui'
 import { stockApi, type StockRequest } from '../api'
-import { ref } from 'vue'
 
 const props = defineProps<{
   show: boolean
@@ -13,7 +13,9 @@ const emit = defineEmits<{
   'saved': []
 }>()
 
+const message = useMessage()
 const submitting = ref(false)
+const errorMessage = ref('')
 const editStockForm = ref<StockRequest>({
   code: '',
   name: '',
@@ -22,10 +24,10 @@ const editStockForm = ref<StockRequest>({
   buyPrice: 0
 })
 
-import { watch } from 'vue'
 watch(() => props.show, (val) => {
   if (val && props.stock) {
     editStockForm.value = { ...props.stock }
+    errorMessage.value = ''
   }
 })
 
@@ -36,12 +38,16 @@ const handleEditStock = async () => {
   if (!editStockForm.value.buyPrice || editStockForm.value.buyPrice <= 0) return
 
   submitting.value = true
+  errorMessage.value = ''
   try {
     await stockApi.updateStock(editStockForm.value.code, editStockForm.value)
     emit('update:show', false)
     emit('saved')
+    message.success('Stock updated successfully')
   } catch (error) {
-    console.error(error)
+    const msg = error instanceof Error ? error.message : 'Failed to update stock'
+    errorMessage.value = msg
+    message.error(msg)
   } finally {
     submitting.value = false
   }

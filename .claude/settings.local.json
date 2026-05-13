@@ -51,7 +51,11 @@
       "Bash(python3 -m json.tool)",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('Analysis Method:', d.get\\('analysisMethod'\\)\\); print\\('News Sentiment Score:', d.get\\('scores',{}\\).get\\('newsSentiment',{}\\).get\\('score'\\)\\); print\\('News Sentiment Summary:', d.get\\('scores',{}\\).get\\('newsSentiment',{}\\).get\\('summary'\\)\\)\")",
       "Bash(curl -s http://localhost:8080/api/stocks/news-sentiment/sh600519 -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
-      "Bash(grep -E 'Sprintf|Format.*%s|Replace.*\\\\$')"
+      "Bash(grep -E 'Sprintf|Format.*%s|Replace.*\\\\$')",
+      "Bash(bash *)",
+      "Bash(omc ask *)",
+      "mcp__plugin_oh-my-claudecode_t__state_write",
+      "mcp__plugin_oh-my-claudecode_t__state_clear"
     ]
   }
 }

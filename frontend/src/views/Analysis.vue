@@ -320,7 +320,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   NCard, NSpace, NSpin, NAlert,
-  NDivider, NIcon
+  NDivider, NIcon, useMessage
 } from 'naive-ui'
 import { stockApi, type StockAnalysis, type StockQuote, type TechnicalAnalysis } from '../api'
 import { IconWallet, IconTrend, IconClock, IconChart, IconRobot } from '../components/icons'
@@ -332,6 +332,7 @@ import BottomTabs from '../components/BottomTabs.vue'
 
 const route = useRoute()
 const router = useRouter()
+const message = useMessage()
 
 const stockCode = ref(route.params.code as string)
 const loading = ref(false)
@@ -381,7 +382,8 @@ const fetchQuote = async () => {
   try {
     quote.value = await stockApi.getQuote(stockCode.value)
   } catch (err) {
-    console.error(err)
+    const msg = err instanceof Error ? err.message : 'Failed to fetch quote'
+    message.error(msg)
   }
 }
 

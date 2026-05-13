@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   NButton, NIcon,
-  NSwitch, NSpin, NEmpty, NButtonGroup
+  NSwitch, NSpin, NEmpty, NButtonGroup, useMessage
 } from 'naive-ui'
 import { watchlistApi, stockApi, backupApi, type WatchlistItem, type StockQuote } from '../api'
 import { IconRefresh, IconDelete, IconBackup, IconCloudDownload } from '../components/icons'
@@ -13,6 +13,7 @@ import BottomTabs from '../components/BottomTabs.vue'
 import { formatVolume } from '../utils/format'
 
 const router = useRouter()
+const message = useMessage()
 
 const watchlist = ref<WatchlistItem[]>([])
 const quotes = ref<Map<string, StockQuote>>(new Map())
@@ -55,7 +56,8 @@ const fetchWatchlist = async () => {
   try {
     watchlist.value = await watchlistApi.getWatchlist()
   } catch (error) {
-    console.error(error)
+    const msg = error instanceof Error ? error.message : 'Failed to fetch watchlist'
+    message.error(msg)
   } finally {
     loading.value = false
   }
@@ -93,8 +95,10 @@ const handleRemove = async (code: string) => {
     await watchlistApi.removeFromWatchlist(code)
     watchlist.value = watchlist.value.filter(item => item.code !== code)
     quotes.value.delete(code)
+    message.success('Removed from watchlist')
   } catch (error) {
-    console.error(error)
+    const msg = error instanceof Error ? error.message : 'Failed to remove stock'
+    message.error(msg)
   }
 }
 
@@ -104,8 +108,10 @@ const handleAddToWatchlist = async (code: string, name: string) => {
     await fetchWatchlist()
     const quote = await stockApi.getQuote(code)
     quotes.value.set(code, quote)
+    message.success(`${name} added to watchlist`)
   } catch (error) {
-    console.error(error)
+    const msg = error instanceof Error ? error.message : 'Failed to add to watchlist'
+    message.error(msg)
   }
 }
 
@@ -116,12 +122,14 @@ const handleBackup = async () => {
   try {
     const result = await backupApi.triggerBackup()
     backupStatus.value = result.message
+    message.success('Backup started')
     setTimeout(() => {
       backupStatus.value = ''
     }, 5000)
   } catch (error) {
     console.error(error)
     backupStatus.value = 'Backup failed'
+    message.error('Backup failed')
     setTimeout(() => {
       backupStatus.value = ''
     }, 3000)

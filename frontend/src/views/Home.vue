@@ -157,7 +157,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { NButton, NEmpty, NIcon } from 'naive-ui'
+import { NButton, NEmpty, NIcon, useMessage } from 'naive-ui'
 import { stockApi, authApi, type Stock, type StockRequest } from '../api'
 import { IconWallet, IconCoin, IconTrend, IconDataLine, IconRefresh, IconSearch, IconDelete, IconEdit } from '../components/icons'
 import BackgroundOrbs from '../components/BackgroundOrbs.vue'
@@ -168,6 +168,7 @@ import DeleteModal from '../components/DeleteModal.vue'
 
 const router = useRouter()
 const route = useRoute()
+const message = useMessage()
 
 const stocks = ref<Stock[]>([])
 const loading = ref(false)
@@ -219,9 +220,15 @@ const showEditModal = (stock: Stock) => {
 }
 
 const confirmDelete = async () => {
-  await stockApi.deleteStock(selectedStockCode.value)
-  showPopup.value = false
-  await fetchStocks()
+  try {
+    await stockApi.deleteStock(selectedStockCode.value)
+    showPopup.value = false
+    await fetchStocks()
+    message.success('Stock deleted')
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Failed to delete stock'
+    message.error(msg)
+  }
 }
 
 const goToAnalysis = (code: string) => {
@@ -250,7 +257,8 @@ const fetchStocks = async () => {
       stocks.value = updatedStocks
     }
   } catch (error) {
-    console.error(error)
+    const msg = error instanceof Error ? error.message : 'Failed to fetch stocks'
+    message.error(msg)
   } finally {
     loading.value = false
   }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { NModal, NForm, NFormItem, NInput, NInputNumber, NButton, NSpace } from 'naive-ui'
+import { ref } from 'vue'
+import { NModal, NForm, NFormItem, NInput, NInputNumber, NButton, NSpace, useMessage } from 'naive-ui'
 import { stockApi, type StockRequest } from '../api'
 
 const props = defineProps<{
@@ -11,8 +12,10 @@ const emit = defineEmits<{
   'added': []
 }>()
 
+const message = useMessage()
 const submitting = ref(false)
 const lookingUp = ref(false)
+const errorMessage = ref('')
 
 const stockForm = ref<StockRequest>({
   code: '',
@@ -25,12 +28,14 @@ const stockForm = ref<StockRequest>({
 const lookupStock = async () => {
   if (!stockForm.value.code) return
   lookingUp.value = true
+  errorMessage.value = ''
   try {
     const quote = await stockApi.getQuote(stockForm.value.code)
     stockForm.value.name = quote.name
     stockForm.value.currentPrice = quote.current
   } catch {
     stockForm.value.name = ''
+    errorMessage.value = 'Failed to lookup stock code'
   } finally {
     lookingUp.value = false
   }
@@ -46,19 +51,21 @@ const handleAddStock = async () => {
   if (!formData.name) formData.name = formData.code
 
   submitting.value = true
+  errorMessage.value = ''
   try {
     await stockApi.createStock(formData)
     emit('update:show', false)
     stockForm.value = { code: '', name: '', currentPrice: 0, quantity: 0, buyPrice: 0 }
     emit('added')
+    message.success('Stock added successfully')
   } catch (error) {
-    console.error(error)
+    const msg = error instanceof Error ? error.message : 'Failed to add stock'
+    errorMessage.value = msg
+    message.error(msg)
   } finally {
     submitting.value = false
   }
 }
-
-import { ref } from 'vue'
 </script>
 
 <template>

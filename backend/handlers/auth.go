@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"time"
 
@@ -9,6 +10,15 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
+)
+
+// Error constants for consistent error messages
+const (
+	ErrInvalidCredentials      = "Invalid credentials"
+	ErrAuthorizationRequired   = "Authorization header required"
+	ErrUserNotAuthenticated    = "User not authenticated"
+	ErrUserNotFound            = "User not found"
+	ErrFailedToGenerateToken   = "Failed to generate token"
 )
 
 type LoginRequest struct {
@@ -37,12 +47,14 @@ func Login(c *gin.Context) {
 
 	var user models.User
 	if err := config.DB.Where("username = ?", req.Username).First(&user).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		log.Printf("Login attempt failed: user %s not found", req.Username)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": ErrInvalidCredentials})
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		log.Printf("Login attempt failed: invalid password for user %s", req.Username)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": ErrInvalidCredentials})
 		return
 	}
 
@@ -57,10 +69,12 @@ func Login(c *gin.Context) {
 	cfg := config.LoadConfig()
 	tokenString, err := token.SignedString([]byte(cfg.JWTSecret))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		log.Printf("Failed to generate token for user %s: %v", user.Username, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": ErrFailedToGenerateToken})
 		return
 	}
 
+	log.Printf("User %s logged in successfully", user.Username)
 	c.JSON(http.StatusOK, LoginResponse{
 		Token:     tokenString,
 		ExpiresAt: expiresAt.Unix(),
@@ -83,13 +97,14 @@ func Logout(c *gin.Context) {
 func GetCurrentUser(c *gin.Context) {
 	userID := getUserID(c)
 	if userID == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": ErrAuthorizationRequired})
 		return
 	}
 
 	var user models.User
 	if err := config.DB.First(&user, userID).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		log.Printf("GetCurrentUser: user %s not found", userID)
+		c.JSON(http.StatusNotFound, gin.H{"error": ErrUserNotFound})
 		return
 	}
 
